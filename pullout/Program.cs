@@ -3,6 +3,7 @@ using OpenQA.Selenium.Chrome;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -287,16 +288,40 @@ class Program
 
     static int Main(string[] args)
     {
-        string chromeProfile = "C:\\SeleniumProfile";
+        string exeDir = Path.GetFullPath(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
+        string logPath = Path.Join(exeDir, "chromedriver.log");
+        string chromeProfile = Path.Join(exeDir, "SeleniumProfile");
+        Directory.CreateDirectory(chromeProfile);
 
         ChromeOptions options = new ChromeOptions();
         options.AddArgument("--remote-allow-origins=*");
+
+        if (chromeProfile[0] == '/') // Check if linux
+        {
+            options.AddArgument("--ozone-platform=x11");
+            options.AddArgument("--disable-gpu");
+            options.AddArgument("--disable-software-rasterizer");
+            options.AddArgument("--disable-gpu-compositing");
+            options.AddArgument("--disable-vulkan");
+            options.AddArgument("--no-sandbox");
+            options.AddArgument("--disable-dev-shm-usage");
+        }
+
         options.AddExcludedArgument("enable-automation");
+        options.AddAdditionalChromeOption("useAutomationExtension", false);
         options.AddArgument("--disable-blink-features=AutomationControlled");
         options.AddArgument($"--user-data-dir={chromeProfile}");
+        options.AddArgument("--disable-disable-rasterizer");
+
+        options.AddArgument("--window-size=800,600");
+
+
+        ChromeDriverService service = ChromeDriverService.CreateDefaultService();
+        service.LogPath = logPath;
+        service.EnableVerboseLogging = true;
 
         Console.WriteLine("Opening browser");
-        ChromeDriver driver = new ChromeDriver(options);
+        ChromeDriver driver = new ChromeDriver(service, options);
         try
         {
             // Goto paypal
