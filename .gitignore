@@ -1,2 +1,3 @@
-pullout/bin
-pullout/obj
+**/.venv
+**/__pycache__
+**/secret
