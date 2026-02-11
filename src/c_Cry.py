@@ -54,4 +54,61 @@ class Cry:
             e = _CLIError(_e)
         raise e
 
+    def order_buy(self, symbol:str, amount:float):
+        """
+        Creates a buy order
+        
+        :param symbol:
+            Symbol (ex: 'BTC/USD')
+        :param amount:
+            Amount
+        :return:
+            Order ID
+        :raise CLIError:
+            An error occurred
+        """
+        try:
+            amount = self.__exchange.amount_to_precision(\
+                symbol, amount) # type: ignore
+            orderid = self.__exchange.create_market_buy_order(\
+                symbol, amount) # type: ignore
+            return orderid
+        except Exception as _e:
+            e = _CLIError(_e)
+        raise e
+
+    def order_sell(self, symbol:str, amount:float):
+        """
+        Creates a sell order
+        
+        :param symbol:
+            Symbol (ex: 'BTC/USD')
+        :param amount:
+            Amount
+        :return:
+            Order ID
+        :raise CLIError:
+            An error occurred
+        """
+        try:
+            amount = self.__exchange.amount_to_precision(\
+                symbol, amount) # type: ignore
+            orderid = self.__exchange.create_market_sell_order(\
+                symbol, amount) # type: ignore
+            return orderid
+        except Exception as _e:
+            e = _CLIError(_e)
+        raise e
+
+    def order_status(self, orderid, symbol:str):
+        """
+        Retrieves the status of an order
+        
+        :param orderid:
+            Order ID
+        :param symbol:
+            Symbol (ex: 'BTC/USD')
+        """
+        self.__exchange.fetch_order(orderid, symbol)
+
     #endregion

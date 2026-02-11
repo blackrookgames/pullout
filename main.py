@@ -15,6 +15,9 @@ def main():
         # Create crypto interface
         cry = src.Cry(api)
         balance = cry.get_balance('USD')
+        # order = cry.order_buy('BTC/USD', 5)
+# ------------------------------------------------------------------------->
+        
         print(f"USD Balance: {balance}")
     except src.CLIError as _e:
         print(f"ERROR: {_e}", file = sys.stderr)
