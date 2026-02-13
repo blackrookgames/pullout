@@ -1,45 +1,65 @@
 # ------------------------------------------------------------------------->
+import asyncio
 import pathlib
 import sys
 
 import src
 
+async def main_loop(app:src.App):
+    looping = True
+    error = None
+    loop = asyncio.get_running_loop()
+    update_params = src.AppUpdateParams()
+    update_result = src.AppUpdateResult() # Trick the loop so an initial update will be triggered
+    while looping:
+        # Input
+        _key = app.appio.get_ch()
+        if _key != -1: update_params.input_add(_key)
+        # Update
+        if update_result is not None:
+            # Evaluate result
+            if update_result.error is not None:
+                error = update_result.error
+                looping = False
+            elif app.quit:
+                looping = False
+            # Schedule next update
+            if looping:
+                _task = loop.run_in_executor(None, app.update, update_params)
+                async def wait_task():
+                    nonlocal update_result
+                    update_result = await _task
+                asyncio.create_task(wait_task())
+                update_params = src.AppUpdateParams()
+                update_result = None
+        # Yield control
+        await asyncio.sleep(0.01)
+    if error is None: return
+    raise error
+
 def main():
+    if len(sys.argv) == 0: return 1
+    appio = src.inner.AppIO.create()
     try:
-        if len(sys.argv) == 0: return 1
-        # What to do?
-        whattodo = '0'
-        if len(sys.argv) > 1:
-            whattodo = sys.argv[1]
         # Get directories
         pydir = pathlib.Path(sys.argv[0]).resolve().parent
         secretdir = pydir.joinpath("secret")
         # Get API info
         apipath = secretdir.joinpath("cdp_api_key.json")
-        api = src.APIInfo(apipath)
+        api = src.inner.APIInfo(apipath)
         # Create crypto interface
-        cry = src.Cry(api)
-        # Do what to do
-        match whattodo:
-            case '0':
-                balance = cry.get_balance('USD')
-                print(f"Balance: {balance} USD")
-            case '1':
-                amount = 5
-                markets = cry.load_markets()
-                order = cry.order_buy('BTC/USD', amount)
-                print(f"Bought {amount} USD worth of BTC")
-            case '2':
-                amount = 5
-                order = cry.order_sell('BTC/USD',\
-                    cry.compute_from('BTC/USD', amount))
-                print(f"Sold {amount} USD worth of BTC")
-            case _:
-                raise src.CLIError(f"Invalid code: {whattodo}")
-    except src.CLIError as _e:
-        print(f"ERROR: {_e}", file = sys.stderr)
-        return 1
-    return 0
+        cry = src.inner.Cry(api)
+        # Loop
+        asyncio.run(main_loop(src.App(cry, appio)))
+        # Success!!!
+        return 0
+    except src.inner.CLIError as _e:
+        e = _e
+    finally:
+        appio.destroy()
+    # ERROR
+    print(f"ERROR: {e.etype} {e}", file = sys.stderr)
+    return 1
 
 if __name__ == "__main__":
     sys.exit(main())

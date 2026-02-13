@@ -195,7 +195,7 @@ class Cry:
                 e = _CLIError(_e)
             raise e
 
-    def order_get(self, orderid:str, symbol:str):
+    def order_get(self, orderid:str, symbol:None|str = None):
         """
         Retrieves an order with the specified ID
         
@@ -210,6 +210,41 @@ class Cry:
         """
         try:
             return self.__exchange.fetch_order(orderid, symbol)
+        except Exception as _e:
+            e = _CLIError(_e)
+        raise e
+
+    def order_cancel(self, orderid:str, symbol:None|str = None):
+        """
+        Cancels an order with the specified ID
+        
+        :param orderid:
+            Order ID
+        :param symbol:
+            Symbol (ex: 'BTC/USD')
+        :raise CLIError:
+            An error occurred
+        """
+        try:
+            self.__exchange.cancel_order(orderid, symbol)
+            return
+        except Exception as _e:
+            e = _CLIError(_e)
+        raise e
+
+    def order_cancel_all(self, symbol:None|str = None):
+        """
+        Cancels all open orders
+        
+        :param symbol:
+            Symbol (ex: 'BTC/USD'); if not None, only orders for the 
+            specified symbol are cancelled
+        :raise CLIError:
+            An error occurred
+        """
+        try:
+            self.__exchange.cancel_all_orders(symbol)
+            return
         except Exception as _e:
             e = _CLIError(_e)
         raise e
