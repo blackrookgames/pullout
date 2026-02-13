@@ -36,14 +36,17 @@ class AppCRSys:
         """
         self.__coroutines.append(_AppCR(coroutine))
 
-    def update(self):
+    def update(self, delta:float):
         """
         Update routine
+
+        :param delta:
+            Seconds since last update
         """
         _i = 0
         while _i < len(self.__coroutines):
             _cr = self.__coroutines[_i]
-            _cr.update()
+            _cr.update(delta)
             if _cr.finish: self.__coroutines.pop(_i)
             else: _i += 1
     

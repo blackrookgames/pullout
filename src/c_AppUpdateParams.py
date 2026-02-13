@@ -12,6 +12,22 @@ class AppUpdateParams:
         Initializer for AppUpdateParams
         """
         self.__input:list[int] = []
+        self.__delta:float = 0
+
+    #endregion
+
+    #region properties
+
+    @property
+    def delta(self):
+        """
+        Seconds since last update
+        """
+        return self.__delta
+    
+    @delta.setter
+    def delta(self, value:float):
+        self.__delta = value
 
     #endregion
 

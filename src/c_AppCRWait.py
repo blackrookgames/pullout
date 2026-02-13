@@ -35,9 +35,12 @@ class AppCRWait:
 
     #region methods
 
-    def update(self):
+    def update(self, delta:float):
         """
         Update routine
+
+        :param delta:
+            Seconds since last update
         """
         raise NotImplementedError("update has not yet been implemented.")
 

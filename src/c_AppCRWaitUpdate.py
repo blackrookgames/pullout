@@ -8,9 +8,9 @@ class AppCRWaitUpdate(_AppCRWait):
     Represents a wait till the next update
     """
 
-    #region methods
+    #regionmethods
 
-    def update(self):
+    def update(self, delta:float):
         self._unpause()
 
     #endregion

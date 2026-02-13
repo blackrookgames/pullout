@@ -22,7 +22,7 @@ class AppCR:
         self.__coroutine = coroutine
         self.__finish = False
         self.__wait = None
-        self.update()
+        self.update(0.0) # This is the first update; delta is 0.0
         
     #endregion
 
@@ -39,14 +39,17 @@ class AppCR:
 
     #region methods
     
-    def update(self):
+    def update(self, delta:float):
         """
         Update routine
+
+        :param delta:
+            Seconds since last update
         """
         if self.__finish: return
         # Update wait
         if self.__wait is not None and self.__wait.pause:
-            self.__wait.update()
+            self.__wait.update(delta)
         # Next wait
         if self.__wait is None or (not self.__wait.pause):
             self.__wait = next(self.__coroutine, None)

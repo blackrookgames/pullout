@@ -12,8 +12,8 @@ from .c_AppCRSys import\
     AppCRSys as _AppCRSys
 from .c_AppCRType import\
     AppCRType as _AppCRType
-from .c_AppCRWaitUpdate import\
-    AppCRWaitUpdate as _AppCRWaitUpdate
+from .c_AppCRWaitTime import\
+    AppCRWaitTime as _AppCRWaitTime
 from .c_AppUpdateParams import\
     AppUpdateParams as _AppUpdateParams
 from .c_AppUpdateResult import\
@@ -34,7 +34,12 @@ class App:
 
     #region init
 
-    def __init__(self, cry:_Cry, appio:_AppIO):
+    def __init__(self, cry:_Cry, appio:_AppIO,\
+            ddos_delay:float,\
+            ddos_max:int,\
+            net_delay:float,\
+            net_max:int,\
+            symbols:dict[str, str]):
         """
         Initializer for App
 
@@ -48,13 +53,19 @@ class App:
         # quit
         self.__quit = False
         # ddos
-        self.__ddos_delay = 30
-        self.__ddos_max = 4
+        self.__ddos_delay = ddos_delay
+        self.__ddos_max = ddos_max
         # net
-        self.__net_delay = 5
-        self.__net_max = 40
+        self.__net_delay = net_delay
+        self.__net_max = net_max
+        # symbols
+        self.__symbols = symbols
         # crsys
         self.__crsys = _AppCRSys()
+        # inputcache
+        self.__inputcache:list[int] = []
+        # delta
+        self.__delta = 0.0
 
     #endregion
 
@@ -88,21 +99,21 @@ class App:
     def __print_line(self, y:int, message:str):
         w, h = self.__appio.get_size()
         if len(message) < w:
-            message += ' ' * (len(message) - w)
+            message += ' ' * (w - len(message))
         self.__appio.print(0, y, message)
     
     def __wrap(self, action:_Callable[[], None]):
-        def _catch(_attempts:int, _max:int, _delay:float, _msg:str):
-            _attempts += 1
-            if _attempts >= _max:
+        def _catch(_retries:int, _max:int, _delay:float, _msg:str):
+            if _retries >= _max:
                 return -1
+            _retries += 1
             self.__print_line(2,\
-                f"{_msg} Retrying in {_delay} seconds. {_attempts}")
-            return _attempts
-        ddos_attempts = 0
-        net_attempts = 0
+                f"{_msg} Retrying in {_delay} seconds. {_retries}/{_max}")
+            return _retries
+        ddos_retries = 0
+        net_retries = 0
         error = None
-        wait = 0
+        wait = 0.0
         while True:
             try:
                 action()
@@ -110,36 +121,35 @@ class App:
             except _CLIError as _error:
                 match _error.etype:
                     case _CLIErrorType.DDOS:
-                        ddos_attempts = _catch(\
-                            ddos_attempts,\
+                        ddos_retries = _catch(\
+                            ddos_retries,\
                             self.__ddos_max,\
                             self.__ddos_delay,\
                             "DDOS error.")
-                        if ddos_attempts < 0:
+                        if ddos_retries < 0:
                             error = _error
                         else: wait = self.__ddos_delay
                     case _CLIErrorType.NETWORK:
-                        net_attempts = _catch(\
-                            net_attempts,\
+                        net_retries = _catch(\
+                            net_retries,\
                             self.__net_max,\
                             self.__net_delay,\
                             "Network error.")
-                        if net_attempts < 0:
+                        if net_retries < 0:
                             error = _error
                         else: wait = self.__net_delay
                     case _:
                         error = _error
             if error is None:
-                for _i in range(wait):
-                    yield _AppCRWaitUpdate()
+                yield _AppCRWaitTime(wait)
             else: break
         raise error
     
     def __update_price(self):
         price = self.__cry.get_price('BTC/USD')
         dtnow = _datetime.now(_timezone.utc)
-        self.appio.print(0, 0, f"{dtnow}")
-        self.appio.print(0, 1, f"Current BTC price: {price}")
+        self.__print_line(0, f"{self.__delta}")
+        self.__print_line(1, f"Current BTC price: {price}")
 
     #endregion
 
@@ -157,14 +167,18 @@ class App:
             An error occurred
         """
         try:
+            # Read parameters
+            self.__inputcache.extend(params.input_loop())
+            self.__delta = params.delta
             # Check input
-            for _input in params.input_loop():
+            if len(self.__inputcache) > 0:
+                _input = self.__inputcache.pop(0)
                 # Quit
                 if _input == 27: # esc
                     self.__quit = True
                     return _AppUpdateResult()
             # Coroutines
-            self.__crsys.update()
+            self.__crsys.update(self.__delta)
             # Check price
             if not self.__crsys.running():
                 self.__crsys.start(self.__wrap(self.__update_price))
