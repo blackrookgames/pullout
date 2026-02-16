@@ -1,20 +1,23 @@
-all = ['APIInfo']
-
+all = []
+    
 import json as _json
 
-from .c_CLIError import\
+from typing import\
+    Any as _Any
+
+from ..helper.c_CLIError import\
     CLIError as _CLIError
 
-class APIInfo:
+class _CryAPI:
     """
     Represents information about an API key
     """
 
     #region init
 
-    def __init__(self, path):
+    def __init__(self, path:_Any):
         """
-        Initializer for APIInfo
+        Initializer for _CryAPI
         
         :param path:
             Path to JSON file
@@ -60,7 +63,7 @@ class APIInfo:
     #region helper methods
 
     @classmethod
-    def __loadjson(cls, path):
+    def __loadjson(cls, path:_Any):
         try:
             with open(str(path), 'r') as f:
                 return _json.load(f)

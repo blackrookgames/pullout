@@ -1,9 +1,9 @@
-all = ['AppCRWaitUpdate']
+all = ['CRWaitUpdate']
 
-from .c_AppCRWait import\
-    AppCRWait as _AppCRWait
+from .c_CRWait import\
+    CRWait as _CRWait
 
-class AppCRWaitTime(_AppCRWait):
+class CRWaitTime(_CRWait):
     """
     Represents a wait for a certain length of time
     """
@@ -12,7 +12,7 @@ class AppCRWaitTime(_AppCRWait):
 
     def __init__(self, delay:float):
         """
-        Initializer for AppCRWaitTime
+        Initializer for CRWaitTime
 
         :param delay:
             Length of time to wait
@@ -23,11 +23,11 @@ class AppCRWaitTime(_AppCRWait):
 
     #endregion
 
-    #region methods
+    #region helper methods
 
-    def update(self, delta:float):
+    def _update(self, delta:float):
         self.__time += delta
         if self.__time >= self.__delay:
-            self._unpause()
+            self._stopwait()
 
     #endregion
