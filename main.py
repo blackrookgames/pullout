@@ -121,11 +121,14 @@ class Cmd(cli.CLICommand):
             fix_right = self_off_right + 1
             fix_top = self_off_top + 1
             fix_bottom = self_off_bottom + 1
-            # Create status table
-            obj_statustable = entity.StatusTable(\
+            # Create crypto handler
+            obj_crypto = entity.CryptoStats(\
                 self_symbols, self_interval,\
                 self_ddos_delay, self_ddos_max,\
                 self_net_delay, self_net_max)
+            params.objects.append(obj_crypto)
+            # Create status table
+            obj_statustable = entity.StatusTable(obj_crypto)
             obj_statustable.x.dis0 = fix_left
             obj_statustable.x.dis1 = fix_right
             obj_statustable.y.dis0 = fix_top
