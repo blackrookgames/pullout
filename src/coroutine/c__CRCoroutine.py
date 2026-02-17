@@ -44,7 +44,7 @@ class _CRCoroutine:
         Assume
         - delta >= 0.0
         \n
-        Also accessed by __init__
+        Also accessed by ./__init__.py
         """
         if self.__finish: return
         # Update wait

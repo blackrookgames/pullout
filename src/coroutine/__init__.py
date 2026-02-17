@@ -17,7 +17,7 @@ _f_coroutines:list[_CRCoroutine] = []
 
 def _m_init():
     """
-    Also accessed by App.__init__
+    Also accessed by ../app/__init__.py
     """
     global _f_state
     if _f_state != _State.NOTRUN: return
@@ -30,7 +30,7 @@ def _m_init():
 
 def _m_final():
     """
-    Also accessed by App.__init__
+    Also accessed by ../app/__init__.py
     """
     global _f_state
     if _f_state != _State.RUN: return
@@ -44,7 +44,7 @@ def _m_update(delta:float):
     - _m_state == _State.RUN
     - delta >= 0.0
     \n
-    Also accessed by App.__init__
+    Also accessed by ../app/__init__.py
     """
     global _f_coroutines
     _i = 0

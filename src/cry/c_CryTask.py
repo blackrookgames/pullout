@@ -35,7 +35,7 @@ class CryTask:
 
     def _run(self, exchange:_ccxt.coinbase):
         """
-        Also accessed by __init__
+        Also accessed by ./__init__.py
 
         :raise CLIError:
             An error occurred

@@ -28,7 +28,7 @@ _f_tasks:list[CryTask] = []
 
 def _m_init(apipath:_Any):
     """
-    Also accessed by App.__init__
+    Also accessed by ../app/__init__.py
 
     :raise CLIError:
         An error occurred
@@ -70,7 +70,7 @@ def _m_init(apipath:_Any):
 
 def _m_final():
     """
-    Also accessed by App.__init__
+    Also accessed by ../app/__init__.py
     """
     global _f_state
     if _f_state != _State.RUN: return
@@ -83,7 +83,7 @@ async def _m_update(loop:_asyncio.AbstractEventLoop):
     Assume
     - _m_state == _State.RUN
     \n
-    Also accessed by App.__init__
+    Also accessed by ../app/__init__.py
     """
     global _f_exchange, f_tasks
     assert _f_exchange is not None
