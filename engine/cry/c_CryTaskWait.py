@@ -9,7 +9,7 @@ from .c_CryTaskStatus import\
 
 class CryTaskWait(_CRWait):
     """
-    Represents a wait till a task finishes
+    Represents a wait while a task is running
     """
 
     #region init
@@ -29,7 +29,7 @@ class CryTaskWait(_CRWait):
     #region helper methods
 
     def _update(self, delta:float):
-        if self.__task.status == _CryTaskStatus.FINISH:
+        if not self.__task.stillrunning():
             self._stopwait()
 
     #endregion

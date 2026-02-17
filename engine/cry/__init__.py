@@ -1,6 +1,8 @@
 from .c_CryTask import *
+from .c_CryTaskBalance import *
+from .c_CryTaskLoad import *
+from .c_CryTaskPrice import *
 from .c_CryTaskStatus import *
-from .c_CryTaskTest import *
 from .c_CryTaskWait import *
 
 import asyncio as _asyncio
@@ -94,7 +96,7 @@ async def _m_update(loop:_asyncio.AbstractEventLoop):
             _task = loop.run_in_executor(None, _task._run, _f_exchange)
             async def _runtask(): await _task
             _asyncio.create_task(_runtask())
-        elif _task.status == CryTaskStatus.FINISH:
+        elif not _task.stillrunning():
             _f_tasks.pop(0)
 
 #endregion

@@ -1,13 +1,14 @@
 from .c_AppObject import *
 from .c_AppStart import *
 from .c_AppUpdate import *
+from .p_AppPaneObject import *
 
 import asyncio
 
-import src.boacon as _boacon
-import src.coroutine as _coroutine
-import src.cry as _cry
-import src.helper as _helper
+import engine.boacon as _boacon
+import engine.coroutine as _coroutine
+import engine.cry as _cry
+import engine.helper as _helper
 
 #region variables
 
@@ -88,21 +89,21 @@ def run(params:AppStart):
         _f_running = True
         # Reset looping
         _f_looping = True
-        # Add objects
-        _f_objects = [_obj for _obj in params.objects]
-        for _obj in _f_objects: _obj._set_active(True)
         # Initialize subsystems
         _coroutine._m_init()
         _cry._m_init(params.apipath)
         # Initialize boacon
         _boacon.init()
         _boacon.panes().append(_f_console)
-        _f_console.x.dis0 = 1
-        _f_console.x.dis1 = 1
-        _f_console.x.len = None
-        _f_console.y.dis0 = 3
-        _f_console.y.dis1 = 1
-        _f_console.y.len = None
+        _f_console.x.dis0 = params.con_left
+        _f_console.x.dis1 = params.con_right
+        _f_console.x.len = params.con_width
+        _f_console.y.dis0 = params.con_top
+        _f_console.y.dis1 = params.con_bottom
+        _f_console.y.len = params.con_height
+        # Add objects
+        _f_objects = [_obj for _obj in params.objects]
+        for _obj in _f_objects: _obj._set_active(True)
         # Run async
         asyncio.run(_m_main())
         # Success!!!
@@ -110,14 +111,14 @@ def run(params:AppStart):
     except _helper.CLIError as _e:
         e = _e
     finally:
+        # Remove objects
+        for _obj in _f_objects: _obj._set_active(False)
+        _f_objects.clear()
         # Finalize boacon
         _boacon.final()
         # Finalize subsystems
         _cry._m_final()
         _coroutine._m_final()
-        # Remove objects
-        for _obj in _f_objects: _obj._set_active(False)
-        _f_objects.clear()
         # Mark as not running
         _f_running = False
     raise e

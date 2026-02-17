@@ -15,5 +15,8 @@ class CryTaskStatus(_Enum):
     RUN = _auto()
     """Task is currently executing"""
 
-    FINISH = _auto()
+    SUCCESS = _auto()
     """Task has completed successfully"""
+
+    ERROR = _auto()
+    """An error occurred while executing the task"""

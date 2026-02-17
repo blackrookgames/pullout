@@ -1,7 +1,6 @@
 # Clears the cache files
 
 shdir="$(dirname $(realpath $BASH_SOURCE))"
-pydir="$(dirname $shdir)/src"
 
 clrcache() {
     local _dir=$1
@@ -24,4 +23,5 @@ clrcache() {
     fi
 }
 
-clrcache $pydir
+clrcache "$(dirname $shdir)/engine"
+clrcache "$(dirname $shdir)/entity"
