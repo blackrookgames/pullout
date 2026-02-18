@@ -8,14 +8,22 @@ from typing import\
     Callable as _Callable,\
     cast as _cast
 
+import cry as _cry
 import engine.app as _app
 import engine.boacon as _boacon
 import engine.coroutine as _coroutine
-import engine.cry as _cry
 import engine.helper as _helper
 
 from .c_CryptoStats import\
-    CryptoStats as _Crypto
+    CryptoStats as _CryptoStats
+
+_WIDTH_CURSOR = 3
+_WIDTH_SYMBOL = 10
+_WIDTH_PRICE = 20
+_HEADER = _boacon.BCStr((\
+    _boacon.BCStr(' ' * _WIDTH_CURSOR),\
+    _boacon.BCStr("Symbol".ljust(_WIDTH_SYMBOL)),\
+    _boacon.BCStr("Price".ljust(_WIDTH_PRICE))))
 
 class StatusTable(_app.AppPaneObject):
     """
@@ -24,7 +32,7 @@ class StatusTable(_app.AppPaneObject):
 
     #region init
 
-    def __init__(self, crypto:_Crypto):
+    def __init__(self, crypto:_CryptoStats):
         """
         Initializer for StatusTable
 
@@ -41,8 +49,45 @@ class StatusTable(_app.AppPaneObject):
     #region receivers
 
     def __r_newstats(self):
-        for _stat in self.__crypto.stats:
-            _app.console().print(f"{_stat.currency} {_stat.price}")
+        self._update_chrs()
+
+    #endregion
+
+    #region AppObjectPane
+    
+    def _refreshbuffer(self):
+        super()._refreshbuffer()
+        _SPACE = _boacon.BCChar(0x20)
+        # Draw header
+        for _i in range(min(len(_HEADER), self._chrs_w)):
+            self._chrs[_i] = _HEADER[_i]
+        # Draw rows
+        for _i in range(len(self.__crypto.stats)):
+            _stat = self.__crypto.stats[_i]
+            _w = self._chrs_w
+            _j = (_i + 1) * self._chrs_w
+            # Cursor
+            for _k in range(min(_WIDTH_CURSOR, _w)):
+                self._chrs[_j] = _SPACE
+                _w -= 1
+                _j += 1
+            # Symbol
+            _s = _stat.currency.ljust(_WIDTH_SYMBOL)
+            for _k in range(min(_WIDTH_SYMBOL, _w)):
+                self._chrs[_j] = _boacon.BCChar(ord(_s[_k]))
+                _w -= 1
+                _j += 1
+            # Price
+            _s = str(_stat.price).ljust(_WIDTH_PRICE)
+            for _k in range(min(_WIDTH_PRICE, _w)):
+                self._chrs[_j] = _boacon.BCChar(ord(_s[_k]))
+                _w -= 1
+                _j += 1
+            # Padding
+            while _w > 0:
+                self._chrs[_j] = _SPACE
+                _w -= 1
+                _j += 1
 
     #endregion
 

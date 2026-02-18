@@ -56,7 +56,7 @@ class AppPaneObject(_AppObject, _BCPane):
         """
         pass
 
-    def __update_chrs(self):
+    def _update_chrs(self):
         # Make sure pane has a valid size
         if self.__chrs_w == 0 or self.__chrs_h == 0:
             return
@@ -89,7 +89,7 @@ class AppPaneObject(_AppObject, _BCPane):
         self.__chrs_h = max(0, self.y.pntlen)
         self.__chrs = _np.full(\
             self.__chrs_w * self.__chrs_h, _BCChar(0x20), dtype = object)
-        self.__update_chrs()
+        self._update_chrs()
 
     def _draw(self,\
             setchr:_Callable[[int, int, _BCChar], None]):

@@ -23,5 +23,6 @@ clrcache() {
     fi
 }
 
+clrcache "$(dirname $shdir)/cry"
 clrcache "$(dirname $shdir)/engine"
 clrcache "$(dirname $shdir)/entity"

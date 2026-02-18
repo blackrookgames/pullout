@@ -17,7 +17,6 @@ class AppStart:
         """
         Initializer for AppStart
         """
-        self.__apipath = ""
         self.__objects:list[_AppObject] = []
         self.__con_left:None|int = 1
         self.__con_right:None|int = 1
@@ -29,16 +28,6 @@ class AppStart:
     #endregion
 
     #region properties
-
-    @property
-    def apipath(self):
-        """
-        Path of API JSON file
-        """
-        return self.__apipath
-    @apipath.setter
-    def apipath(self, value:_Any):
-        self.__apipath = value
 
     @property
     def con_left(self):

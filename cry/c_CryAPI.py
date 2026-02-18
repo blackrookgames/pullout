@@ -1,14 +1,13 @@
-all = []
+all = ['CryAPI']
     
 import json as _json
 
 from typing import\
     Any as _Any
 
-from ..helper.c_CLIError import\
-    CLIError as _CLIError
+import engine.helper as _helper
 
-class _CryAPI:
+class CryAPI:
     """
     Represents information about an API key
     """
@@ -17,7 +16,7 @@ class _CryAPI:
 
     def __init__(self, path:_Any):
         """
-        Initializer for _CryAPI
+        Initializer for CryAPI
         
         :param path:
             Path to JSON file
@@ -30,14 +29,14 @@ class _CryAPI:
         if 'name' in data:
             key = str(data['name'])
         if key is None:
-            raise _CLIError("Could not find the API key.")
+            raise _helper.CLIError("Could not find the API key.")
         self.__key = key
         # secret
         secret = None
         if 'privateKey' in data:
             secret = str(data['privateKey'])
         if secret is None:
-            raise _CLIError("Could not find the secret.")
+            raise _helper.CLIError("Could not find the secret.")
         self.__secret = secret
 
     #endregion
@@ -68,7 +67,7 @@ class _CryAPI:
             with open(str(path), 'r') as f:
                 return _json.load(f)
         except Exception as _e:
-            e = _CLIError(_e)
+            e = _helper.CLIError(_e)
         raise e
 
     #endregion

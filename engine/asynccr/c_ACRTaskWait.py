@@ -1,22 +1,20 @@
-all = ['CryTaskWait']
+all = ['ACRTaskWait']
 
 from ..coroutine.c_CRWait import\
     CRWait as _CRWait
-from .c_CryTask import\
-    CryTask as _CryTask
-from .c_CryTaskStatus import\
-    CryTaskStatus as _CryTaskStatus
+from .c_ACRTask import\
+    ACRTask as _ACRTask
 
-class CryTaskWait(_CRWait):
+class ACRTaskWait(_CRWait):
     """
     Represents a wait while a task is running
     """
 
     #region init
 
-    def __init__(self, task:_CryTask):
+    def __init__(self, task:_ACRTask):
         """
-        Initializer for CryTaskWait
+        Initializer for ACRTaskWait
 
         :param task:
             Task to wait for

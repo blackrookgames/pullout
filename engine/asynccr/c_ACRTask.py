@@ -1,25 +1,30 @@
-all = ['CryTask']
+all = ['ACRTask']
 
-import ccxt as _ccxt
+from typing import\
+    Any as _Any
 
 from ..helper.c_CLIError import\
     CLIError as _CLIError
-from .c_CryTaskStatus import\
-    CryTaskStatus as _CryTaskStatus
+from .c_ACRTaskStatus import\
+    ACRTaskStatus as _ACRTaskStatus
 
-class CryTask:
+class ACRTask:
     """
-    Represents a crypto-related task
+    Represents an asyncronous task
     """
 
     #region init
 
-    def __init__(self):
+    def __init__(self, func, *args, **kwargs):
         """
-        Initializer for CryTask
+        Initializer for ACRTask
         """
-        self.__status = _CryTaskStatus.INIT
+        self.__status = _ACRTaskStatus.INIT
         self.__error:None|_CLIError = None
+        self.__result:_Any = None
+        self.__func = func
+        self.__args = args
+        self.__kwargs = kwargs
 
     #endregion
 
@@ -39,33 +44,34 @@ class CryTask:
         If task completed successfully, this value is None.
         """
         return self.__error
+    
+    @property
+    def result(self):
+        """
+        Task result. This is the return value of the input function.
+        """
+        return self.__result
 
     #endregion
 
     #region helper methods
 
-    def _run(self, exchange:_ccxt.coinbase):
+    def _run(self):
         """
         Also accessed by ./__init__.py
 
         :raise CLIError:
             An error occurred
         """
-        if self.__status != _CryTaskStatus.INIT: return
-        self.__status = _CryTaskStatus.RUN
+        if self.__status != _ACRTaskStatus.INIT: return
+        self.__status = _ACRTaskStatus.RUN
         try:
-            self._main(exchange)
-            self.__status = _CryTaskStatus.SUCCESS
+            self.__result = self.__func(\
+                *self.__args, **self.__kwargs)
+            self.__status = _ACRTaskStatus.SUCCESS
         except _CLIError as _e:
-            self.__status = _CryTaskStatus.ERROR
+            self.__status = _ACRTaskStatus.ERROR
             self.__error = _e
-
-    def _main(self, exchange:_ccxt.coinbase):
-        """
-        :raise CLIError:
-            An error occurred
-        """
-        raise NotImplementedError("_main has not yet been implemented.")
 
     #endregion
 
@@ -78,8 +84,8 @@ class CryTask:
         :return:
             False if status == SUCCESS or status == ERROR; otherwise True
         """
-        if self.__status == _CryTaskStatus.SUCCESS: return False
-        if self.__status == _CryTaskStatus.ERROR: return False
+        if self.__status == _ACRTaskStatus.SUCCESS: return False
+        if self.__status == _ACRTaskStatus.ERROR: return False
         return True
 
     #endregion

@@ -1,12 +1,12 @@
-all = ['CryTaskStatus']
+all = ['ACRTaskStatus']
 
 from enum import\
     auto as _auto,\
     Enum as _Enum
 
-class CryTaskStatus(_Enum):
+class ACRTaskStatus(_Enum):
     """
-    Represents the status of a crypto-related task
+    Represents the status of an async task
     """
 
     INIT = _auto()

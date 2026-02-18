@@ -5,9 +5,9 @@ from .p_AppPaneObject import *
 
 import asyncio
 
+import engine.asynccr as _asynccr
 import engine.boacon as _boacon
 import engine.coroutine as _coroutine
-import engine.cry as _cry
 import engine.helper as _helper
 
 #region variables
@@ -35,7 +35,7 @@ async def _m_main():
         _delta = time - _time
         # Update subsystems
         _coroutine._m_update(_delta)
-        await _cry._m_update(loop)
+        await _asynccr._m_update(loop)
         # Update objects
         _update = AppUpdate(_delta, _key)
         for _obj in _f_objects:
@@ -91,7 +91,7 @@ def run(params:AppStart):
         _f_looping = True
         # Initialize subsystems
         _coroutine._m_init()
-        _cry._m_init(params.apipath)
+        _asynccr._m_init()
         # Initialize boacon
         _boacon.init()
         _boacon.panes().append(_f_console)
@@ -117,7 +117,7 @@ def run(params:AppStart):
         # Finalize boacon
         _boacon.final()
         # Finalize subsystems
-        _cry._m_final()
+        _asynccr._m_final()
         _coroutine._m_final()
         # Mark as not running
         _f_running = False
