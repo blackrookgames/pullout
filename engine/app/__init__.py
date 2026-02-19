@@ -1,7 +1,8 @@
 from .c_AppObject import *
+from .c_AppPaneObject import *
+from .c_AppPaneObjectCharBuffer import *
 from .c_AppStart import *
 from .c_AppUpdate import *
-from .p_AppPaneObject import *
 
 import asyncio
 

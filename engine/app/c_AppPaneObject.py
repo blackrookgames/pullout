@@ -11,6 +11,8 @@ from engine.boacon import\
     panes as _panes
 from .c_AppObject import\
     AppObject as _AppObject
+from .c_AppPaneObjectCharBuffer import\
+    AppPaneObjectCharBuffer as _AppPaneObjectCharBuffer
 
 class AppPaneObject(_AppObject, _BCPane):
     """
@@ -25,22 +27,14 @@ class AppPaneObject(_AppObject, _BCPane):
         """
         _AppObject.__init__(self)
         _BCPane.__init__(self)
-        self.__chrs_w = 0
-        self.__chrs_h = 0
-        self.__chrs = _np.full(0, _BCChar(0x20), dtype = object)
+        self.__chars = _AppPaneObjectCharBuffer()
 
     #endregion
 
     #region helper properties
 
     @property
-    def _chrs_w(self): return self.__chrs_w
-
-    @property
-    def _chrs_h(self): return self.__chrs_h
-
-    @property
-    def _chrs(self): return self.__chrs
+    def _chars(self): return self.__chars
 
     #endregion
 
@@ -58,8 +52,7 @@ class AppPaneObject(_AppObject, _BCPane):
 
     def _update_chrs(self):
         # Make sure pane has a valid size
-        if self.__chrs_w == 0 or self.__chrs_h == 0:
-            return
+        if len(self.__chars) == 0: return
         # Refresh
         self._refreshbuffer()
         # Mark dirty
@@ -83,20 +76,17 @@ class AppPaneObject(_AppObject, _BCPane):
     
     def _resolved(self):
         super()._resolved()
-        if self.__chrs_w == self.x.pntlen and self.__chrs_h == self.y.pntlen:
-            return
-        self.__chrs_w = max(0, self.x.pntlen)
-        self.__chrs_h = max(0, self.y.pntlen)
-        self.__chrs = _np.full(\
-            self.__chrs_w * self.__chrs_h, _BCChar(0x20), dtype = object)
+        if self.__chars.width == self.x.pntlen and\
+            self.__chars.height == self.y.pntlen: return
+        self.__chars._format(\
+            max(0, self.x.pntlen), max(0, self.y.pntlen))
         self._update_chrs()
 
     def _draw(self,\
             setchr:_Callable[[int, int, _BCChar], None]):
         super()._draw(setchr)
         # Make sure pane has a valid size
-        if self.__chrs_w == 0 or self.__chrs_h == 0:
-            return
+        if len(self.__chars) == 0: return
         # Copy to screen
         iy = self.y.clipoff
         oy = self.y.clip0
@@ -104,7 +94,7 @@ class AppPaneObject(_AppObject, _BCPane):
             ix = self.x.clipoff
             ox = self.x.clip0
             while ox < self.x.clip1:
-                setchr(ox, oy, self.__chrs[iy * self.__chrs_w + ix])
+                setchr(ox, oy, self.__chars[iy * self.__chars.width + ix])
                 ix += 1
                 ox += 1
             iy += 1

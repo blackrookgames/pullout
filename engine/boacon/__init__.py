@@ -2,6 +2,8 @@ from .c_BCChar import *
 from .c_BCCoord import *
 from .c_BCError import *
 from .c_BCPane import *
+from .c_BCSignal import *
+from .c_BCSignalEmitter import *
 from .c_BCState import *
 from .c_BCStr import *
 from .g_attr import *
@@ -46,6 +48,14 @@ _f_panes:None|list[BCPane] = None
 _f_bgbuffer:None|_npt.NDArray[_np.bool_] = None
 
 _f_border = False
+
+_s_on_init_emitter = BCSignalEmitter[()]()
+_s_on_init = BCSignal(_s_on_init_emitter)
+_s_on_final_emitter = BCSignalEmitter[()]()
+_s_on_final = BCSignal(_s_on_final_emitter)
+
+_s_postdraw_emitter:None|BCSignalEmitter[_curses.window] = None
+_s_postdraw:None|BCSignal[_curses.window] = None
 
 #endregion
 
@@ -170,12 +180,18 @@ def init():
     _f_panes = []
     # Initialize border
     _f_border = True
+    # Initialize signals
+    global _s_postdraw, _s_postdraw_emitter
+    _s_postdraw_emitter = BCSignalEmitter[_curses.window]()
+    _s_postdraw = BCSignal[_curses.window](_s_postdraw_emitter)
     # Success!!!
     _f_state = BCState.RUN
+    _s_on_init_emitter.emit(())
 
 def final():
     global _f_state
     if _f_state != BCState.RUN: return
+    _s_on_final_emitter.emit(())
     _f_state = BCState.FINAL
     # Global vars
     global _f_win, _panes
@@ -214,6 +230,32 @@ def panes():
     assert _f_panes is not None
     return _f_panes
 
+def on_init():
+    """
+    Emitted after the boacon system is initialized
+    """
+    global _s_on_init
+    return _s_on_init
+
+def on_final():
+    """
+    Emitted before the boacon system is finalized
+    """
+    global _s_on_final
+    return _s_on_final
+
+def postdraw():
+    """
+    Emitted after drawing the panes and right before the screen is refreshed
+    
+    :raise BCError:
+        boacon system is not currently running
+    """
+    _m_verify_run()
+    global _s_postdraw
+    assert _s_postdraw is not None
+    return _s_postdraw
+
 #endregion
 
 #region functions
@@ -230,6 +272,8 @@ def refresh():
     global _f_border
     assert _f_win is not None
     assert _f_panes is not None
+    global _s_postdraw_emitter
+    assert _s_postdraw_emitter is not None
     # Update size
     _new_h, _new_w = _f_win.getmaxyx()
     if _f_win_w != _new_w or _f_win_h != _new_h:
@@ -262,6 +306,8 @@ def refresh():
                 # Set character
                 try: _f_win.addch(_y, _x, _chr)
                 except: pass
+    # Post draw
+    _s_postdraw_emitter.emit((_f_win,))
     # Success!!!
     _f_win.refresh()
     

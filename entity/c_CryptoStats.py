@@ -4,6 +4,8 @@ import math as _math
 
 from collections.abc import\
     Iterable as _Iterable
+from datetime import\
+    datetime as _datetime
 from typing import\
     Callable as _Callable,\
     cast as _cast
@@ -62,6 +64,7 @@ class CryptoStats(_app.AppObject):
             _CryptoStat(_key) for _key in self.__crypto_symbols]
         self.__stats = _helper.LockedList[_CryptoStat](self.__stats_list)
         self.__stats_updating = False
+        self.__stats_updated = _datetime(1990, 1, 1)
 
     #endregion
 
@@ -73,6 +76,13 @@ class CryptoStats(_app.AppObject):
         Stats of each currency
         """
         return self.__stats
+    
+    @property
+    def stats_updated(self):
+        """
+        Date/time stats were last updated
+        """
+        return self.__stats_updated
 
     #endregion
 
@@ -104,6 +114,7 @@ class CryptoStats(_app.AppObject):
         # Update stats
         for _i in range(len(self.__stats_list)):
             self.__stats_list[_i]._update(prices[_i])
+        self.__stats_updated = _datetime.now()
         # Success!!!
         self.__stats_updating = False
         self.__newstats_e.emit()
