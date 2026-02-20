@@ -1,18 +1,13 @@
 all = ['StatusTable']
 
 import curses as _curses
-import math as _math
 
-from collections.abc import\
-    Iterable as _Iterable
 from typing import\
     Callable as _Callable,\
     cast as _cast
 
-import cry as _cry
 import engine.app as _app
 import engine.boacon as _boacon
-import engine.coroutine as _coroutine
 import engine.helper as _helper
 
 from .c_CryptoSignal import\
@@ -59,6 +54,7 @@ class StatusTable(_app.AppPaneObject):
         self.__lv_offset = 0
         self.__lv_height = 0
         self.__lv_timer = 0.0
+        self.__lv_dirty = False
         # Selected index
         self.__selindex = -1
         self.__selindex_changed_e = _CryptoSignalEmitter()
@@ -100,6 +96,7 @@ class StatusTable(_app.AppPaneObject):
     #region helper methods
     
     def __lv_update(self, index:None|int):
+        self.__lv_dirty = False
         # Update index
         if index is not None:
             self.__lv_index = index
@@ -114,10 +111,13 @@ class StatusTable(_app.AppPaneObject):
                     self.__lv_offset = self.__lv_index
                 if (self.__lv_offset + view_height) <= self.__lv_index:
                     self.__lv_offset = self.__lv_index + 1 - view_height
-                if self.__lv_offset < 0:
-                    self.__lv_offset = 0
                 # Set height
                 self.__lv_height = view_height
+                # Fix offset
+                if self.__lv_offset < 0:
+                    self.__lv_offset = 0
+                if (self.__lv_offset + self.__lv_height) > len(self.__crypto.stats):
+                    self.__lv_offset = len(self.__crypto.stats) - self.__lv_height
             else:
                 self.__lv_offset = 0
                 self.__lv_height = len(self.__crypto.stats)
@@ -139,9 +139,16 @@ class StatusTable(_app.AppPaneObject):
     #region AppObjectPane
     
     def _refreshbuffer(self):
+        if self.__lv_dirty:
+            self.__lv_update(None)
+            return
         super()._refreshbuffer()
         _SPACE = _boacon.BCChar(0x20)
         _oindex = 0
+        _test_w = self._chars.width
+        _test_h = self._chars.height
+        # Ensure size is valid
+        if self._chars.height < 3: return
         # Format date/time of last updated
         dt = self.__dtformat.create(self.__crypto.stats_updated)
         dt = f"Last updated {dt} "
@@ -255,8 +262,8 @@ class StatusTable(_app.AppPaneObject):
     #region BCPane
     
     def _resolved(self):
+        self.__lv_dirty = True
         super()._resolved()
-        self.__lv_update(None)
 
     def _draw(self,\
             setchr:_Callable[[int, int, _boacon.BCChar], None]):

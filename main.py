@@ -61,6 +61,8 @@ class Cmd(cli.CLICommand):
         self.__datetime:None|helper.DTFormat = None
         # App objects
         self.__obj_statustable:None|entity.StatusTable = None
+        self.__obj_buysell:None|entity.BuySell = None
+        self.__obj_keycontrols:None|entity.KeyControls = None
 
     #endregion
 
@@ -262,16 +264,13 @@ class Cmd(cli.CLICommand):
     def _main(self):
         D_CONSOLE = 10
         D_STATUS = 40
+        D_KEYCONTROLS = 20
         try:
             # Update offsets
-            self_off_left = cast(int,\
-                self.off_left) # type: ignore
-            self_off_right = cast(int,\
-                self.off_right) # type: ignore
-            self_off_top = cast(int,\
-                self.off_top) # type: ignore
-            self_off_bottom = cast(int,\
-                self.off_bottom) # type: ignore
+            self_off_left = cast(int, self.off_left) # type: ignore
+            self_off_right = cast(int, self.off_right) # type: ignore
+            self_off_top = cast(int, self.off_top) # type: ignore
+            self_off_bottom = cast(int, self.off_bottom) # type: ignore
             self.__vis_left = max(0, self_off_left)
             self.__vis_right = max(0, self_off_right)
             self.__vis_top = max(0, self_off_top)
@@ -285,9 +284,7 @@ class Cmd(cli.CLICommand):
             # Load API
             print("Loading API")
             crypto_api = cry.CryAPI(Path(sys.argv[0]).resolve()\
-                .parent\
-                .joinpath("secret")\
-                .joinpath("cdp_api_key.json"))
+                .parent.joinpath("secret").joinpath("cdp_api_key.json"))
             # Create exchange instance
             print("Creating exchange instance")
             crypto = cry.Cry(crypto_api)
@@ -296,14 +293,12 @@ class Cmd(cli.CLICommand):
             crypto.load_markets(opparams = crypto_opparams)
             # Retrieve symbols
             print("Retrieving symbols")
-            crypto_symbols = self.__get_symbols(\
-                crypto, crypto_opparams)
+            crypto_symbols = self.__get_symbols(crypto, crypto_opparams)
             # Connect signals
             boacon.on_init().connect(self.__r_boacon_on_init)
             boacon.on_final().connect(self.__r_boacon_on_final)
             #region gather input
-            self_interval = cast(float,\
-                self.interval) # type: ignore
+            self_interval = cast(float, self.interval) # type: ignore
             #endregion
             params = app.AppStart()
             # Fix visual offsets
@@ -316,18 +311,30 @@ class Cmd(cli.CLICommand):
             crypto_opparams.printfunc = app.console().print
             # Create crypto handler
             obj_crypto = entity.CryptoStats(\
-                crypto, crypto_symbols, crypto_opparams,\
-                self_interval)
+                crypto, crypto_symbols, crypto_opparams, self_interval)
             params.objects.append(obj_crypto)
             # Create status table
-            self.__obj_statustable = entity.StatusTable(\
-                obj_crypto, self.__datetime)
+            self.__obj_statustable = entity.StatusTable(obj_crypto, self.__datetime)
             self.__obj_statustable.x.dis0 = panes_left
             self.__obj_statustable.x.len = D_STATUS
             self.__obj_statustable.y.dis0 = panes_top
             self.__obj_statustable.y.dis1 = panes_bottom + D_CONSOLE + 1
             self.__obj_statustable.selindex_changed.connect(self.__r_obj_statustable_selindex_changed)
             params.objects.append(self.__obj_statustable)
+            # Create buy/sell handler
+            self.__obj_buysell = entity.BuySell(obj_crypto)
+            self.__obj_buysell.x.dis0 = panes_left + D_STATUS + 1
+            self.__obj_buysell.x.dis1 = panes_right + D_KEYCONTROLS + 1
+            self.__obj_buysell.y.dis0 = panes_top
+            self.__obj_buysell.y.dis1 = panes_bottom + D_CONSOLE + 1
+            params.objects.append(self.__obj_buysell)
+            # Create keyboard control display
+            self.__obj_keycontrols = entity.KeyControls()
+            self.__obj_keycontrols.x.len = D_KEYCONTROLS
+            self.__obj_keycontrols.x.dis1 = panes_right
+            self.__obj_keycontrols.y.dis0 = panes_top
+            self.__obj_keycontrols.y.dis1 = panes_bottom + D_CONSOLE + 1
+            params.objects.append(self.__obj_keycontrols)
             # Setup console pane
             params.con_left = panes_left
             params.con_right = panes_right
