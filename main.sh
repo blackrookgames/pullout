@@ -7,4 +7,4 @@ fi
 
 python=$1
 
-$python ./main.py --ex_pfx USD --time12
+$python ./main.py --ex_pfx USD --time12 --count 5

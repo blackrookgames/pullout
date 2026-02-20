@@ -41,7 +41,7 @@ class BuySell(_app.AppPaneObject):
     #region receivers
 
     def __r_stats_newstats(self):
-        self.__print("Updated")
+        pass
 
     #endregion
 

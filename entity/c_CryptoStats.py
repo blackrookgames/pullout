@@ -28,8 +28,9 @@ class CryptoStats(_app.AppObject):
 
     def __init__(self,\
             crypto:_cry.Cry,\
-            crypto_symbols:dict[str, str],\
             crypto_opparams:_cry.CryOpParams,\
+            cryptocurrs:set[str],\
+            noncrypto:str,\
             interval:float):
         """
         Initializer for CryptoStats
@@ -38,17 +39,19 @@ class CryptoStats(_app.AppObject):
             Handler for crypto operations
         :param crypto_opparams:
             Parameters for crypto operations
-        :param crypto_symbols:
-            Symbols (ex: BTC/USD)
+        :param cryptocurrs:
+            Crypto currencies to invest in (ex: BTC)
+        :param noncrypto:
+            Non-crypto currency to use for buying and selling
         :param interval:
             Length of update intervals
         """
         super().__init__()
         # Gather parameters
         self.__crypto = crypto
-        self.__crypto_symbols = {\
-            _k: _v for _k, _v in crypto_symbols.items() }
         self.__crypto_opparams = crypto_opparams
+        self.__cryptocurrs = [_curr for _curr in cryptocurrs]
+        self.__noncrypto = noncrypto
         self.__interval = interval
         # Initialize signals
         self.__newstats_e = _helper.SignalEmitter()
@@ -56,8 +59,7 @@ class CryptoStats(_app.AppObject):
         # Initialize timer
         self.__timer = 0.0
         # Initialize stats
-        self.__stats_list = [\
-            _CryptoStat(_key) for _key in self.__crypto_symbols]
+        self.__stats_list = [_CryptoStat(_curr) for _curr in self.__cryptocurrs]
         self.__stats = _helper.LockedList[_CryptoStat](self.__stats_list)
         self.__stats_updating = False
         self.__stats_updated = _datetime(1990, 1, 1)
@@ -99,12 +101,10 @@ class CryptoStats(_app.AppObject):
         self.__stats_updating = True
         # Get new stats
         prices = []
-        for _key, _val in self.__crypto_symbols.items():
+        for _curr in self.__cryptocurrs:
             _task_result = _helper.Ptr[float]()
             _task = self.__crypto.get_price_cr(\
-                f"{_key}/{_val}",\
-                _task_result,\
-                self.__crypto_opparams)
+                f"{_curr}/{self.__noncrypto}", _task_result, self.__crypto_opparams)
             for _yield in _task: yield _yield
             prices.append(_task_result.value)
         # Update stats
@@ -129,9 +129,7 @@ class CryptoStats(_app.AppObject):
                 _coroutine.create(self.__stats_update())
             # "Reset" timer
             if self.__interval > 0.0:
-                self.__timer -=\
-                    _math.floor(self.__timer / self.__interval)\
-                    * self.__interval
+                self.__timer -= _math.floor(self.__timer / self.__interval) * self.__interval
             else: self.__timer = 0.0
 
     def _activated(self):

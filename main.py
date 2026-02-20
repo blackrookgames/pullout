@@ -14,20 +14,14 @@ import entity
 
 #region helper functions
 
-def parse_symbols(input:str):
-    symbols:dict[str, str] = {}
-    for _rawsymbol in input.split(','):
-        _symbol = _rawsymbol.strip() 
-        if len(_symbol) == 0: continue
-        # Find slash
-        if not ('/' in _symbol):
-            print(f"ERROR: Missing forward slash: {_symbol}",\
-                file = sys.stderr)
-            return False, None
-        _slashpos = _symbol.index('/')
-        # Add symbol
-        symbols[_symbol[0:_slashpos]] = _symbol[(_slashpos + 1):]
-    return True, symbols
+def parse_set(input:str):
+    newset:set[str] = set()
+    for _item in input.split(','):
+        __item = _item.strip()
+        if len(__item) == 0: continue
+        if __item in newset: continue
+        newset.add(__item)
+    return True, newset
 
 def parse_list(input:str):
     newlist:list[str] = []
@@ -72,39 +66,38 @@ class Cmd(cli.CLICommand):
 
     #region input
 
-    __symbols = cli.CLIOptionWArgDef(\
-        name = "symbols",\
-        short = 's',\
-        desc = "Symbols (ex: BTC/USD)",\
-        parse = parse_symbols,\
+    __crypto = cli.CLIOptionWArgDef(\
+        name = "crypto",\
+        short = 'b',\
+        desc = "Crypto currencies to invest in (ex: BTC)",\
+        parse = parse_set,\
         default = None)
     __currency = cli.CLIOptionWArgDef(\
         name = "currency",\
         short = 'c',\
-        desc = "Currency to convert crypto from/to (ex: USD)." +\
-            " Ignored if --symbols is defined",\
+        desc = "Currency to convert crypto from/to (ex: USD).",\
         default = 'USD')
     __count = cli.CLIOptionWArgDef(\
         name = "count",\
         short = 'n',\
-        desc = "Number of symbols to retrieve." +\
-            " Ignored if --symbols is defined",\
+        desc = "Number of crypto currencies to retrieve." +\
+            " Ignored if --crypto is defined",\
         parse = cli.CLIParseUtil.to_int,\
         default = 10)
     
     __ex = cli.CLIOptionWArgDef(\
         name = "ex",\
-        desc = "Crypto to exclude; " +\
+        desc = "Crypto currencies to exclude; " +\
             "non-crypto can also be included (such as USD)." +\
-            " Ignored if --symbols is defined",\
+            " Ignored if --crypto is defined",\
         parse = parse_list,\
         default = None)
     
     __ex_pfx = cli.CLIOptionWArgDef(\
         name = "ex_pfx",\
-        desc = "Prefixes of crypto to exclude; " +\
+        desc = "Prefixes of crypto currencies to exclude; " +\
             "non-crypto can also be included (such as USD)." +\
-            " Ignored if --symbols is defined",\
+            " Ignored if --crypto is defined",\
         parse = parse_list,\
         default = None)
     
@@ -219,11 +212,11 @@ class Cmd(cli.CLICommand):
             self.net_max) # type: ignore
         return crypto_opparams
 
-    def __get_symbols(self,\
-            crypto:cry.Cry,\
-            crypto_opparams:cry.CryOpParams):
-        symbols = cast(None|dict[str, str], self.symbols) # type: ignore
-        if symbols is None:
+    def __get_cryptocurrs(self,\
+            cryp:cry.Cry,\
+            cryp_opparams:cry.CryOpParams):
+        crypto = cast(None|set[str], self.crypto) # type: ignore
+        if crypto is None:
             self_currency = cast(str, self.currency) # type: ignore
             self_count = cast(int, self.count) # type: ignore
             # Get exclusions
@@ -232,12 +225,12 @@ class Cmd(cli.CLICommand):
             if ex is None: ex:list[str] = []
             if ex_pfx is None: ex_pfx:list[str] = []
             # Retrieve all symbols
-            _allsymbols = crypto.get_symbols( opparams = crypto_opparams)
+            _allsymbols = cryp.get_symbols(opparams = cryp_opparams)
             # Extract requested symbols
-            symbols = {}
+            crypto = set()
             for _rawsymbol in _allsymbols:
                 # Check if all requested symbols have been retrieved
-                if len(symbols) >= self_count: break
+                if len(crypto) >= self_count: break
                 # Find slash
                 _slash = -1
                 for _i in range(len(_rawsymbol)):
@@ -246,25 +239,25 @@ class Cmd(cli.CLICommand):
                     break
                 if _slash == -1: continue
                 # Get crypto
-                _crypto = cast(str, _rawsymbol[:_slash])
-                if _crypto in symbols: continue
+                _crycur = cast(str, _rawsymbol[:_slash])
+                if _crycur in crypto: continue
                 # Get currency
                 _currency = cast(str, _rawsymbol[(_slash + 1):])
                 if _currency != self_currency: continue
                 # Check if crypto is excluded
                 _excluded = False
                 for _ex in ex:
-                    if _crypto != _ex: continue
+                    if _crycur != _ex: continue
                     _excluded = True
                     break
                 for _ex_pfx in ex_pfx:
-                    if not _crypto.startswith(_ex_pfx): continue
+                    if not _crycur.startswith(_ex_pfx): continue
                     _excluded = True
                     break
                 if _excluded: continue
-                # Add symbol
-                symbols[_crypto] = _currency
-        return symbols
+                # Add crypto
+                crypto.add(_crycur)
+        return crypto
     
     #endregion
 
@@ -302,13 +295,10 @@ class Cmd(cli.CLICommand):
             crypto.load_markets(opparams = crypto_opparams)
             # Retrieve symbols
             print("Retrieving symbols")
-            crypto_symbols = self.__get_symbols(crypto, crypto_opparams)
+            crypto_cryptocurrs = self.__get_cryptocurrs(crypto, crypto_opparams)
             # Connect signals
             boacon.on_init().connect(self.__r_boacon_on_init)
             boacon.on_final().connect(self.__r_boacon_on_final)
-            #region gather input
-            self_interval = cast(float, self.interval) # type: ignore
-            #endregion
             params = app.AppStart()
             # Fix visual offsets
             panes_left = self.__vis_left + 1
@@ -323,8 +313,12 @@ class Cmd(cli.CLICommand):
             self.__obj_miscops.prompt_finish.connect(self.__r_obj_miscops_prompt_finish)
             params.objects.append(self.__obj_miscops)
             # Create crypto stats handler
+            self_interval = cast(float, self.interval) # type: ignore
+            self_currency = cast(str, self.currency) # type: ignore
             self.__obj_stats = entity.CryptoStats(\
-                crypto, crypto_symbols, crypto_opparams, self_interval)
+                crypto, crypto_opparams,\
+                crypto_cryptocurrs, self_currency,\
+                self_interval)
             params.objects.append(self.__obj_stats)
             # Create status table
             self.__obj_statustable = entity.StatusTable(self.__obj_stats, self.__datetime)
