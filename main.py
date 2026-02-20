@@ -1,4 +1,3 @@
-# ------------------------------------------------------------------------->
 import curses
 import sys
 
@@ -60,6 +59,8 @@ class Cmd(cli.CLICommand):
         self.__vis_bottom = 0
         # Date/time format
         self.__datetime:None|helper.DTFormat = None
+        # App objects
+        self.__obj_statustable:None|entity.StatusTable = None
 
     #endregion
 
@@ -181,50 +182,13 @@ class Cmd(cli.CLICommand):
                 dtstr)
         except curses.error: pass
 
+    def __r_obj_statustable_selindex_changed(self):
+        assert self.__obj_statustable is not None
+        app.console().print(self.__obj_statustable.selindex)
+
     #endregion
 
     #region helper methods
-
-    def __runapp(self,\
-            crypto:cry.Cry,\
-            crypto_opparams:cry.CryOpParams,\
-            crypto_symbols:dict[str, str]):
-        D_CONSOLE = 10
-        assert self.__datetime is not None
-        #region gather input
-        self_interval = cast(float,\
-            self.interval) # type: ignore
-        #endregion
-        params = app.AppStart()
-        # Fix visual offsets
-        panes_left = self.__vis_left + 1
-        panes_right = self.__vis_right + 1
-        panes_top = self.__vis_top + 1
-        panes_bottom = self.__vis_bottom + 2
-        # Fix crypto op params
-        crypto_opparams = crypto_opparams.copy()
-        crypto_opparams.printfunc = app.console().print
-        # Create crypto handler
-        obj_crypto = entity.CryptoStats(\
-            crypto, crypto_symbols, crypto_opparams,\
-            self_interval)
-        params.objects.append(obj_crypto)
-        # Create status table
-        obj_statustable = entity.StatusTable(\
-            obj_crypto, self.__datetime)
-        obj_statustable.x.dis0 = panes_left
-        obj_statustable.x.dis1 = panes_right
-        obj_statustable.y.dis0 = panes_top
-        obj_statustable.y.dis1 = panes_bottom + D_CONSOLE + 1
-        params.objects.append(obj_statustable)
-        # Setup console pane
-        params.con_left = panes_left
-        params.con_right = panes_right
-        params.con_top = None
-        params.con_bottom = panes_bottom
-        params.con_height = D_CONSOLE
-        # Run
-        app.run(params)
 
     def __get_opparams(self):
         crypto_opparams = cry.CryOpParams()
@@ -296,6 +260,8 @@ class Cmd(cli.CLICommand):
     #region methods
 
     def _main(self):
+        D_CONSOLE = 10
+        D_STATUS = 40
         try:
             # Update offsets
             self_off_left = cast(int,\
@@ -335,9 +301,42 @@ class Cmd(cli.CLICommand):
             # Connect signals
             boacon.on_init().connect(self.__r_boacon_on_init)
             boacon.on_final().connect(self.__r_boacon_on_final)
+            #region gather input
+            self_interval = cast(float,\
+                self.interval) # type: ignore
+            #endregion
+            params = app.AppStart()
+            # Fix visual offsets
+            panes_left = self.__vis_left + 1
+            panes_right = self.__vis_right + 1
+            panes_top = self.__vis_top + 1
+            panes_bottom = self.__vis_bottom + 2
+            # Fix crypto op params
+            crypto_opparams = crypto_opparams.copy()
+            crypto_opparams.printfunc = app.console().print
+            # Create crypto handler
+            obj_crypto = entity.CryptoStats(\
+                crypto, crypto_symbols, crypto_opparams,\
+                self_interval)
+            params.objects.append(obj_crypto)
+            # Create status table
+            self.__obj_statustable = entity.StatusTable(\
+                obj_crypto, self.__datetime)
+            self.__obj_statustable.x.dis0 = panes_left
+            self.__obj_statustable.x.len = D_STATUS
+            self.__obj_statustable.y.dis0 = panes_top
+            self.__obj_statustable.y.dis1 = panes_bottom + D_CONSOLE + 1
+            self.__obj_statustable.selindex_changed.connect(self.__r_obj_statustable_selindex_changed)
+            params.objects.append(self.__obj_statustable)
+            # Setup console pane
+            params.con_left = panes_left
+            params.con_right = panes_right
+            params.con_top = None
+            params.con_bottom = panes_bottom
+            params.con_height = D_CONSOLE
             # Run main app code
             print("Launching app")
-            self.__runapp(crypto, crypto_opparams, crypto_symbols)
+            app.run(params)
         except helper.CLIError as _e:
             print(f"ERROR: {_e}", file = sys.stderr)
             return 1

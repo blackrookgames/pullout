@@ -15,6 +15,10 @@ import engine.boacon as _boacon
 import engine.coroutine as _coroutine
 import engine.helper as _helper
 
+from .c_CryptoSignal import\
+    CryptoSignal as _CryptoSignal
+from .c_CryptoSignalEmitter import\
+    CryptoSignalEmitter as _CryptoSignalEmitter
 from .c_CryptoStats import\
     CryptoStats as _CryptoStats
 
@@ -55,11 +59,33 @@ class StatusTable(_app.AppPaneObject):
         self.__lv_offset = 0
         self.__lv_height = 0
         self.__lv_timer = 0.0
+        # Selected index
+        self.__selindex = -1
+        self.__selindex_changed_e = _CryptoSignalEmitter()
+        self.__selindex_changed = _CryptoSignal(self.__selindex_changed_e)
         # Recieve signals
         self.__crypto = crypto
         self.__crypto.newstats.connect(self.__r_newstats)
         # Date/time format
         self.__dtformat = dtformat
+
+    #endregion
+
+    #region properties/signals
+
+    @property
+    def selindex(self):
+        """
+        Index of the currently selected item
+        """
+        return self.__selindex
+
+    @property
+    def selindex_changed(self):
+        """
+        Emitted when the selected index is changed
+        """
+        return self.__selindex_changed
 
     #endregion
 
@@ -98,8 +124,15 @@ class StatusTable(_app.AppPaneObject):
         else:
             self.__lv_offset = 0
             self.__lv_height = 0
+        # Update selected index
+        self.__selindex_set(self.__lv_index if (self.__lv_timer > 0.0) else -1)
         # Update buffer
         self._update_chrs()
+
+    def __selindex_set(self, value:int):
+        if self.__selindex == value: return
+        self.__selindex = value
+        self.__selindex_changed_e.emit()
 
     #endregion
 
@@ -111,7 +144,7 @@ class StatusTable(_app.AppPaneObject):
         _oindex = 0
         # Format date/time of last updated
         dt = self.__dtformat.create(self.__crypto.stats_updated)
-        dt = f"Last updated {dt}"
+        dt = f"Last updated {dt} "
         if len(dt) > self._chars.width:
             dt = dt[(-self._chars.width):]
         # Draw header
@@ -208,6 +241,7 @@ class StatusTable(_app.AppPaneObject):
                 self.__lv_timer -= params.delta
                 if self.__lv_timer <= 0.0:
                     self.__lv_timer = 0.0
+                    self.__selindex_set(-1)
                     self._update_chrs()
 
     def _activated(self):
