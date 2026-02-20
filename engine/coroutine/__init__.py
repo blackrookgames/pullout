@@ -1,6 +1,7 @@
 from .c_CRGen import *
 from .c_CRWait import *
 from .c_CRWaitTime import *
+from .c_CRWaitWhile import *
 
 from ..helper.c_State import\
     State as _State

@@ -6,13 +6,10 @@ from typing import\
     Callable as _Callable,\
     cast as _cast
 
+import cry as _cry
 import engine.app as _app
 import engine.boacon as _boacon
 
-from .c_CryptoSignal import\
-    CryptoSignal as _CryptoSignal
-from .c_CryptoSignalEmitter import\
-    CryptoSignalEmitter as _CryptoSignalEmitter
 from .c_CryptoStats import\
     CryptoStats as _CryptoStats
 
@@ -24,14 +21,37 @@ class BuySell(_app.AppPaneObject):
     #region init
 
     def __init__(self,\
-            crypto:_CryptoStats):
+            opparams:_cry.CryOpParams,\
+            stats:_CryptoStats):
         """
         Initializer for BuySell
 
-        :params crypto:
+        :params stats:
             CryptoStats handler
         """
         super().__init__()
+        # Operation parameters
+        self.__opparams = opparams
+        # Stats handler 
+        self.__stats = stats
+        self.__stats.newstats.connect(self.__r_stats_newstats)
+
+    #endregion
+
+    #region receivers
+
+    def __r_stats_newstats(self):
+        self.__print("Updated")
+
+    #endregion
+
+    #region helper methods
+
+    def __print(self, text:str):
+        if self.__opparams.printfunc is not None:
+            self.__opparams.printfunc(text)
+        else:
+            _app.console().print(text)
 
     #endregion
 

@@ -1,9 +1,9 @@
-all = ['CryptoSignalEmitter']
+all = ['SignalEmitter']
 
-from .c_CryptoSignalReceiver import\
-    CryptoSignalReceiver as _CryptoSignalReceiver
+from .c_SignalReceiver import\
+    SignalReceiver as _SignalReceiver
 
-class CryptoSignalEmitter():
+class SignalEmitter():
     """
     Represents a signal
     """
@@ -12,25 +12,25 @@ class CryptoSignalEmitter():
 
     def __init__(self, ):
         """
-        Initializer for CryptoSignalEmitter
+        Initializer for SignalEmitter
         """
         super().__init__()
-        self.__receivers:set[_CryptoSignalReceiver] = set()
+        self.__receivers:set[_SignalReceiver] = set()
 
     #endregion
 
     #region helper methods
 
-    def _connect(self, receiver:_CryptoSignalReceiver):
+    def _connect(self, receiver:_SignalReceiver):
         """
-        Also accessed by CryptoSignal
+        Also accessed by Signal
         """
         if not receiver in self.__receivers:
             self.__receivers.add(receiver)
 
-    def _disconnect(self, receiver:_CryptoSignalReceiver):
+    def _disconnect(self, receiver:_SignalReceiver):
         """
-        Also accessed by CryptoSignal
+        Also accessed by Signal
         """
         if receiver in self.__receivers:
             self.__receivers.remove(receiver)

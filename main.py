@@ -60,9 +60,13 @@ class Cmd(cli.CLICommand):
         # Date/time format
         self.__datetime:None|helper.DTFormat = None
         # App objects
+        self.__obj_miscops:None|entity.MiscOps = None
+        self.__obj_stats:None|entity.CryptoStats = None
         self.__obj_statustable:None|entity.StatusTable = None
         self.__obj_buysell:None|entity.BuySell = None
         self.__obj_keycontrols:None|entity.KeyControls = None
+        # Print cache
+        self.__printcache = []
 
     #endregion
 
@@ -184,13 +188,24 @@ class Cmd(cli.CLICommand):
                 dtstr)
         except curses.error: pass
 
+    def __r_obj_miscops_prompt_finish(self):
+        for _text in self.__printcache:
+            app.console().print(_text)
+        self.__printcache.clear()
+
     def __r_obj_statustable_selindex_changed(self):
         assert self.__obj_statustable is not None
-        app.console().print(self.__obj_statustable.selindex)
+        self.__print(str(self.__obj_statustable.selindex))
 
     #endregion
 
     #region helper methods
+
+    def __print(self, text:str):
+        assert self.__obj_miscops is not None
+        if self.__obj_miscops.prompting:
+            self.__printcache.append(text)
+        else: app.console().print(text)
 
     def __get_opparams(self):
         crypto_opparams = cry.CryOpParams()
@@ -207,23 +222,17 @@ class Cmd(cli.CLICommand):
     def __get_symbols(self,\
             crypto:cry.Cry,\
             crypto_opparams:cry.CryOpParams):
-        symbols = cast(None|dict[str, str],\
-            self.symbols) # type: ignore
+        symbols = cast(None|dict[str, str], self.symbols) # type: ignore
         if symbols is None:
-            self_currency = cast(str,\
-                self.currency) # type: ignore
-            self_count = cast(int,\
-                self.count) # type: ignore
+            self_currency = cast(str, self.currency) # type: ignore
+            self_count = cast(int, self.count) # type: ignore
             # Get exclusions
-            ex = cast(None|list[str],\
-                self.ex) # type: ignore
-            ex_pfx = cast(None|list[str],\
-                self.ex_pfx) # type: ignore
+            ex = cast(None|list[str], self.ex) # type: ignore
+            ex_pfx = cast(None|list[str], self.ex_pfx) # type: ignore
             if ex is None: ex:list[str] = []
             if ex_pfx is None: ex_pfx:list[str] = []
             # Retrieve all symbols
-            _allsymbols = crypto.get_symbols(\
-                opparams = crypto_opparams)
+            _allsymbols = crypto.get_symbols( opparams = crypto_opparams)
             # Extract requested symbols
             symbols = {}
             for _rawsymbol in _allsymbols:
@@ -308,13 +317,17 @@ class Cmd(cli.CLICommand):
             panes_bottom = self.__vis_bottom + 2
             # Fix crypto op params
             crypto_opparams = crypto_opparams.copy()
-            crypto_opparams.printfunc = app.console().print
-            # Create crypto handler
-            obj_crypto = entity.CryptoStats(\
+            crypto_opparams.printfunc = self.__print
+            # Create misc operation handler
+            self.__obj_miscops = entity.MiscOps()
+            self.__obj_miscops.prompt_finish.connect(self.__r_obj_miscops_prompt_finish)
+            params.objects.append(self.__obj_miscops)
+            # Create crypto stats handler
+            self.__obj_stats = entity.CryptoStats(\
                 crypto, crypto_symbols, crypto_opparams, self_interval)
-            params.objects.append(obj_crypto)
+            params.objects.append(self.__obj_stats)
             # Create status table
-            self.__obj_statustable = entity.StatusTable(obj_crypto, self.__datetime)
+            self.__obj_statustable = entity.StatusTable(self.__obj_stats, self.__datetime)
             self.__obj_statustable.x.dis0 = panes_left
             self.__obj_statustable.x.len = D_STATUS
             self.__obj_statustable.y.dis0 = panes_top
@@ -322,7 +335,7 @@ class Cmd(cli.CLICommand):
             self.__obj_statustable.selindex_changed.connect(self.__r_obj_statustable_selindex_changed)
             params.objects.append(self.__obj_statustable)
             # Create buy/sell handler
-            self.__obj_buysell = entity.BuySell(obj_crypto)
+            self.__obj_buysell = entity.BuySell(crypto_opparams, self.__obj_stats)
             self.__obj_buysell.x.dis0 = panes_left + D_STATUS + 1
             self.__obj_buysell.x.dis1 = panes_right + D_KEYCONTROLS + 1
             self.__obj_buysell.y.dis0 = panes_top

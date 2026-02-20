@@ -29,7 +29,6 @@ async def _m_main():
     while _f_looping:
         # Get keyboard input
         _key = _boacon.getch()
-        if _key == 0x1B: break
         # Update time
         _time = time
         time = loop.time()
@@ -124,6 +123,17 @@ def run(params:AppStart):
         _f_running = False
     raise e
 
+def quit():
+    """
+    Quits the application
+
+    :raise BadOpError:
+        Main application handler is not currently running
+    """
+    _m_raise_if_notrunning()
+    global _f_looping
+    _f_looping = False
+    
 def object_add(obj:AppObject):
     """
     Adds the specified object to the update pool, making it active. 

@@ -16,10 +16,6 @@ import engine.boacon as _boacon
 import engine.coroutine as _coroutine
 import engine.helper as _helper
 
-from .c_CryptoSignal import\
-    CryptoSignal as _CryptoSignal
-from .c_CryptoSignalEmitter import\
-    CryptoSignalEmitter as _CryptoSignalEmitter
 from .c_CryptoStat import\
     CryptoStat as _CryptoStat
 
@@ -55,8 +51,8 @@ class CryptoStats(_app.AppObject):
         self.__crypto_opparams = crypto_opparams
         self.__interval = interval
         # Initialize signals
-        self.__newstats_e = _CryptoSignalEmitter()
-        self.__newstats = _CryptoSignal(self.__newstats_e)
+        self.__newstats_e = _helper.SignalEmitter()
+        self.__newstats = _helper.Signal(self.__newstats_e)
         # Initialize timer
         self.__timer = 0.0
         # Initialize stats
@@ -140,6 +136,8 @@ class CryptoStats(_app.AppObject):
 
     def _activated(self):
         super()._activated()
+        # First update
+        _coroutine.create(self.__stats_update())
 
     def _deactivated(self):
         super()._deactivated()

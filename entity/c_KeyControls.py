@@ -1,20 +1,7 @@
 all = ['KeyControls']
 
-import curses as _curses
-
-from typing import\
-    Callable as _Callable,\
-    cast as _cast
-
 import engine.app as _app
 import engine.boacon as _boacon
-
-from .c_CryptoSignal import\
-    CryptoSignal as _CryptoSignal
-from .c_CryptoSignalEmitter import\
-    CryptoSignalEmitter as _CryptoSignalEmitter
-from .c_CryptoStats import\
-    CryptoStats as _CryptoStats
 
 _SPACE = _boacon.BCChar(0x20)
 
@@ -32,9 +19,9 @@ class KeyControls(_app.AppPaneObject):
         super().__init__()
         # Keys/descriptions
         self.__keydescs = {\
-            _boacon.BCStr("\u2191\u2193"):\
+            _boacon.BCStr(" \u2191\u2193"):\
                 _boacon.BCStr("Navigate")}
-        self.__quit_key = _boacon.BCStr("Esc")
+        self.__quit_key = _boacon.BCStr(" Esc")
         self.__quit_desc = _boacon.BCStr("Quit program")
 
     #endregion
@@ -84,27 +71,4 @@ class KeyControls(_app.AppPaneObject):
         # Quit key/desc
         if _oindex == _quit_offset: _draw(self.__quit_key, self.__quit_desc)
 
-    #endregion
-
-    #region AppObject
-
-    def _update(self, params:_app.AppUpdate):
-        super()._update(params)
-
-    def _activated(self):
-        super()._activated()
-
-    def _deactivated(self):
-        super()._deactivated()
-
-    #endregion
-
-    #region BCPane
-    
-    def _resolved(self):
-        super()._resolved()
-
-    def _draw(self, setchr:_Callable[[int, int, _boacon.BCChar], None]):
-        super()._draw(setchr)
-        
     #endregion

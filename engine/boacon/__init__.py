@@ -78,24 +78,24 @@ def _m_setcursor(visible:bool):
         try: _f_win.leaveok(not visible)
         except _curses.error: pass
 
-def _m_setchr_color(x:int, y:int, chr:BCChar):
+def _m_setchr_color(x:int, y:int, char:BCChar):
     global _f_win, _f_bgbuffer, _f_win_w
     assert _f_win is not None
     assert _f_bgbuffer is not None
-    attr = _curses.A_STANDOUT if attr_emp(chr.attr) else _curses.A_NORMAL
-    attr |= _curses.color_pair(0b111 ^ attr_color(chr.attr))
+    attr = _curses.A_STANDOUT if attr_emp(char.attr) else _curses.A_NORMAL
+    attr |= _curses.color_pair(0b111 ^ attr_color(char.attr))
     try:
-        _f_win.addch(y, x, chr.ord, attr)
+        _f_win.addch(y, x, chr(char.ord), attr)
         _f_bgbuffer[y * _f_win_w + x] = True
     except: pass
 
-def _m_setchr_nocolor(x:int, y:int, chr:BCChar):
+def _m_setchr_nocolor(x:int, y:int, char:BCChar):
     global _f_win, _f_bgbuffer, _f_win_w
     assert _f_win is not None
     assert _f_bgbuffer is not None
-    attr = _curses.A_STANDOUT if attr_emp(chr.attr) else _curses.A_NORMAL
+    attr = _curses.A_STANDOUT if attr_emp(char.attr) else _curses.A_NORMAL
     try:
-        _f_win.addch(y, x, chr.ord, attr)
+        _f_win.addch(y, x, chr(char.ord), attr)
         _f_bgbuffer[y * _f_win_w + x] = True
     except: pass
 

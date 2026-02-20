@@ -10,10 +10,6 @@ import engine.app as _app
 import engine.boacon as _boacon
 import engine.helper as _helper
 
-from .c_CryptoSignal import\
-    CryptoSignal as _CryptoSignal
-from .c_CryptoSignalEmitter import\
-    CryptoSignalEmitter as _CryptoSignalEmitter
 from .c_CryptoStats import\
     CryptoStats as _CryptoStats
 
@@ -57,8 +53,8 @@ class StatusTable(_app.AppPaneObject):
         self.__lv_dirty = False
         # Selected index
         self.__selindex = -1
-        self.__selindex_changed_e = _CryptoSignalEmitter()
-        self.__selindex_changed = _CryptoSignal(self.__selindex_changed_e)
+        self.__selindex_changed_e = _helper.SignalEmitter()
+        self.__selindex_changed = _helper.Signal(self.__selindex_changed_e)
         # Recieve signals
         self.__crypto = crypto
         self.__crypto.newstats.connect(self.__r_newstats)

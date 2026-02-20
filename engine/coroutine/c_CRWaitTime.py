@@ -1,4 +1,4 @@
-all = ['CRWaitUpdate']
+all = ['CRWaitTime']
 
 from .c_CRWait import\
     CRWait as _CRWait

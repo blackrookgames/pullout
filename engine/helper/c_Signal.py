@@ -1,20 +1,20 @@
-all = ['CryptoSignal']
+all = ['Signal']
 
-from .c_CryptoSignalEmitter import\
-    CryptoSignalEmitter as _CryptoSignalEmitter
-from .c_CryptoSignalReceiver import\
-    CryptoSignalReceiver as _CryptoSignalReceiver
+from .c_SignalEmitter import\
+    SignalEmitter as _SignalEmitter
+from .c_SignalReceiver import\
+    SignalReceiver as _SignalReceiver
 
-class CryptoSignal():
+class Signal():
     """
     Represents a signal
     """
     
     #region init
 
-    def __init__(self, emitter:_CryptoSignalEmitter):
+    def __init__(self, emitter:_SignalEmitter):
         """
-        Initializer for CryptoSignal
+        Initializer for Signal
 
         :param emitter:
             Signal emitter
@@ -26,7 +26,7 @@ class CryptoSignal():
 
     #region methods
 
-    def connect(self, receiver:_CryptoSignalReceiver):
+    def connect(self, receiver:_SignalReceiver):
         """
         Connects a receiver to the signal
 
@@ -35,7 +35,7 @@ class CryptoSignal():
         """
         self.__emitter._connect(receiver)
 
-    def disconnect(self, receiver:_CryptoSignalReceiver):
+    def disconnect(self, receiver:_SignalReceiver):
         """
         Disconnects a receiver from the signal
 
