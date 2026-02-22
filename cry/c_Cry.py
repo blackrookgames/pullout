@@ -117,9 +117,12 @@ class Cry:
         return self.__ErrorEval.UNEX,\
             ddos_retries, net_retries
 
-    def __task_sync(self,\
+    def _task_sync(self,\
             opparams:None|_CryOpParams,\
             func, *args, **kwargs):
+        """
+        Also accessed by CryBalance
+        """
         if opparams is None: opparams = _DEF_OPPARAMS
         _ddos_retries = 0
         _net_retries = 0
@@ -140,10 +143,13 @@ class Cry:
                 break
         raise e
 
-    def __task_async(self,\
+    def _task_async(self,\
             opparams:None|_CryOpParams,\
             result:None|_helper.Ptr,\
             func, *args, **kwargs):
+        """
+        Also accessed by CryBalance
+        """
         if opparams is None: opparams = _DEF_OPPARAMS
         _ddos_retries = 0
         _net_retries = 0
@@ -173,6 +179,15 @@ class Cry:
 
     #region helper methods
 
+    def __amount_to_precision(self,\
+            symbol:str,\
+            amount:float):
+        try:
+            return float(self.__exchange.amount_to_precision(symbol, amount)) # type: ignore
+        except _ccxt.InvalidOrder as _e:
+            e = _helper.CLIError(_e, etype = _helper.CLIErrorType.PRECISION)
+        raise e
+
     def __load_markets(self,\
             reload:bool):
         try:
@@ -196,10 +211,52 @@ class Cry:
         except Exception as _e:
             e = _helper.CLIError(_e)
         raise e
+
+    def __fetch_balance(self):
+        try:
+            return self.__exchange.fetch_balance()
+        except Exception as _e:
+            e = _helper.CLIError(_e)
+        raise e
+    
+    def __fetch_ticker(self,\
+            symbol:str):
+        try:
+            return self.__exchange.fetch_ticker(symbol)
+        except Exception as _e:
+            e = _helper.CLIError(_e)
+        raise e
         
+    def __order_sell(self,\
+            symbol:str,\
+            amount:float)\
+            -> dict:
+        # Amount to precision
+        _amount = self.__amount_to_precision(symbol, amount)
+        # Sell
+        try:
+            return self.__exchange.create_market_sell_order(symbol, _amount)
+        except Exception as _e:
+            e = _helper.CLIError(_e)
+        raise e
+        
+    def __order_buy(self,\
+            symbol:str,\
+            amount:float):
+        # Amount to precision
+        _amount = self.__amount_to_precision(symbol, amount)
+        # Buy
+        try:
+            return _cast(dict, self.__exchange.create_market_buy_order_with_cost(symbol, _amount))
+        except Exception as _e:
+            e = _helper.CLIError(_e)
+        raise e
+
     #endregion
 
     #region methods
+
+    #region load_markets
 
     def load_markets(self,\
             reload:bool = False,\
@@ -214,7 +271,7 @@ class Cry:
         :raise CLIError:
             An error occurred
         """
-        return self.__task_sync(opparams,\
+        return self._task_sync(opparams,\
             self.__load_markets, reload)
     
     def load_markets_cr(self,\
@@ -232,10 +289,14 @@ class Cry:
         :raise CLIError:
             An error occurred
         """
-        gen = self.__task_async(opparams, None,\
+        gen = self._task_async(opparams, None,\
             self.__load_markets, reload)
         for _item in gen: yield _item
     
+    #endregion
+
+    #region get_symbols
+
     def get_symbols(self,\
             opparams:None|_CryOpParams = None):
         """
@@ -248,7 +309,7 @@ class Cry:
         :raise CLIError:
             An error occurred
         """
-        return self.__task_sync(opparams,\
+        return self._task_sync(opparams,\
             self.__get_symbols)
     
     def get_symbols_cr(self,\
@@ -266,9 +327,13 @@ class Cry:
         :raise CLIError:
             An error occurred
         """
-        gen = self.__task_async(opparams, result,\
+        gen = self._task_async(opparams, result,\
             self.__get_symbols)
         for _item in gen: yield _item
+    
+    #endregion
+
+    #region get_price
     
     def get_price(self,\
             symbol:str,\
@@ -286,7 +351,7 @@ class Cry:
         :raise CLIError:
             An error occurred
         """
-        return self.__task_sync(opparams,\
+        return self._task_sync(opparams,\
             self.__get_price, symbol)
     
     def get_price_cr(self,\
@@ -308,8 +373,192 @@ class Cry:
         :raise CLIError:
             An error occurred
         """
-        gen = self.__task_async(opparams, result,\
+        gen = self._task_async(opparams, result,\
             self.__get_price, symbol)
         for _item in gen: yield _item
+
+    #endregion
+
+    #region fetch_balance
+    
+    def fetch_balance(self,\
+            opparams:None|_CryOpParams = None):
+        """
+        Fetches balance information
+
+        :param opparams:
+            Operation parameters
+        :return:
+            Balance information
+        :raise CLIError:
+            An error occurred
+        """
+        return self._task_sync(opparams,\
+            self.__fetch_balance)
+    
+    def fetch_balance_cr(self,\
+            result:_helper.Ptr[dict],\
+            opparams:None|_CryOpParams = None):
+        """
+        Fetches balance information
+
+        :param result:
+            Balance information
+        :param opparams:
+            Operation parameters
+        :raise BadOpError:
+            Async task handler is not currently running
+        :raise CLIError:
+            An error occurred
+        """
+        gen = self._task_async(opparams, result,\
+            self.__fetch_balance)
+        for _item in gen: yield _item
+
+    #endregion
+
+    #region fetch_ticker
+    
+    def fetch_ticker(self,\
+            symbol:str,\
+            opparams:None|_CryOpParams = None):
+        """
+        Fetches a price ticker
+
+        :param symbol:
+            Symbol (ex: BTC/USD)
+        :param opparams:
+            Operation parameters
+        :return:
+            Price ticker
+        :raise CLIError:
+            An error occurred
+        """
+        return self._task_sync(opparams,\
+            self.__fetch_ticker, symbol)
+    
+    def fetch_ticker_cr(self,\
+            symbol:str,\
+            result:_helper.Ptr[dict],\
+            opparams:None|_CryOpParams = None):
+        """
+        Fetches a price ticker
+
+        :param symbol:
+            Symbol (ex: BTC/USD)
+        :param result:
+            Price ticker
+        :param opparams:
+            Operation parameters
+        :raise BadOpError:
+            Async task handler is not currently running
+        :raise CLIError:
+            An error occurred
+        """
+        gen = self._task_async(opparams, result,\
+            self.__fetch_ticker, symbol)
+        for _item in gen: yield _item
+
+    #endregion
+
+    #region order_sell
+    
+    def order_sell(self,\
+            symbol:str,\
+            amount:float,\
+            opparams:None|_CryOpParams = None):
+        """
+        Creates an order to sell crypto
+
+        :param symbol:
+            Symbol (ex: BTC/USD)
+        :param amount:
+            Amount to sell
+        :param opparams:
+            Operation parameters
+        :return:
+            Order information
+        :raise CLIError:
+            An error occurred
+        """
+        return self._task_sync(opparams,\
+            self.__order_sell, symbol, amount)
+    
+    def order_sell_cr(self,\
+            symbol:str,\
+            amount:float,\
+            result:_helper.Ptr[dict],\
+            opparams:None|_CryOpParams = None):
+        """
+        Creates an order to sell crypto
+
+        :param symbol:
+            Symbol (ex: BTC/USD)
+        :param amount:
+            Amount to sell
+        :param result:
+            Order information
+        :param opparams:
+            Operation parameters
+        :raise BadOpError:
+            Async task handler is not currently running
+        :raise CLIError:
+            An error occurred
+        """
+        gen = self._task_async(opparams, result,\
+            self.__order_sell, symbol, amount)
+        for _item in gen: yield _item
+
+    #endregion
+
+    #region order_buy
+    
+    def order_buy(self,\
+            symbol:str,\
+            amount:float,\
+            opparams:None|_CryOpParams = None):
+        """
+        Creates an order to buy crypto
+
+        :param symbol:
+            Symbol (ex: BTC/USD)
+        :param amount:
+            Amount to buy
+        :param opparams:
+            Operation parameters
+        :return:
+            Order information
+        :raise CLIError:
+            An error occurred
+        """
+        return self._task_sync(opparams,\
+            self.__order_buy, symbol, amount)
+    
+    def order_buy_cr(self,\
+            symbol:str,\
+            amount:float,\
+            result:_helper.Ptr[dict],\
+            opparams:None|_CryOpParams = None):
+        """
+        Creates an order to buy crypto
+
+        :param symbol:
+            Symbol (ex: BTC/USD)
+        :param amount:
+            Amount to buy
+        :param result:
+            Order information
+        :param opparams:
+            Operation parameters
+        :raise BadOpError:
+            Async task handler is not currently running
+        :raise CLIError:
+            An error occurred
+        """
+        gen = self._task_async(opparams, result,\
+            self.__order_buy, symbol, amount)
+        for _item in gen: yield _item
+
+    #endregion
 
     #endregion

@@ -30,6 +30,8 @@ class CLIError(Exception):
                 etype = _CLIErrorType.DDOS
             elif isinstance(arg, _ccxt.NetworkError):
                 etype = _CLIErrorType.NETWORK
+            elif isinstance(arg, _ccxt.InsufficientFunds):
+                etype = _CLIErrorType.INSUFFICIENT
             else:
                 etype = _CLIErrorType.MISC
         self.__etype = etype

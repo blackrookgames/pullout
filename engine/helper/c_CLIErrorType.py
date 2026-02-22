@@ -15,6 +15,11 @@ class CLIErrorType(_Enum):
     DDOS = _auto()
     """Error caused by DDOS protection"""
 
-    NETWORK = _auto
+    NETWORK = _auto()
     """Network error"""
 
+    PRECISION = _auto()
+    """Precision error"""
+
+    INSUFFICIENT = _auto()
+    """Error caused by insufficient funds"""

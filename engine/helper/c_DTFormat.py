@@ -41,7 +41,7 @@ class DTFormat:
             dt.year, dt.year % 100, dt.month, dt.day)
         # Create string representation of time
         if self.__time12:
-            _hour = 12 if (dt.hour == 0) else (dt.hour % 12)
+            _hour = ((dt.hour + 11) % 12) + 1
             _ampm = "PM" if (dt.hour >= 12) else "AM"
             timestr = f"{_hour:02}:{dt.minute:02}:{dt.second:02} {_ampm}"
         else:

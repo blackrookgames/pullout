@@ -101,6 +101,10 @@ class Cmd(cli.CLICommand):
         parse = parse_list,\
         default = None)
     
+    __sellall = cli.CLIOptionFlagDef(\
+        name = "sellall",\
+        desc = "Whether or not to sell all existing crypto")
+    
     __interval = cli.CLIOptionWArgDef(\
         name = "interval",\
         desc = "Length of update intervals",\
@@ -268,18 +272,21 @@ class Cmd(cli.CLICommand):
         D_STATUS = 40
         D_KEYCONTROLS = 20
         try:
-            # Update offsets
+            self_currency = cast(str, self.currency) # type: ignore
+            self_sellall = cast(bool, self.sellall) # type: ignore
+            self_interval = cast(float, self.interval) # type: ignore
             self_off_left = cast(int, self.off_left) # type: ignore
             self_off_right = cast(int, self.off_right) # type: ignore
             self_off_top = cast(int, self.off_top) # type: ignore
             self_off_bottom = cast(int, self.off_bottom) # type: ignore
+            self_date = cast(str, self.date) # type: ignore
+            self_time12 = cast(bool, self.time12) # type: ignore
+            # Update offsets
             self.__vis_left = max(0, self_off_left)
             self.__vis_right = max(0, self_off_right)
             self.__vis_top = max(0, self_off_top)
             self.__vis_bottom = max(0, self_off_bottom)
             # Get date/time format
-            self_date = cast(str, self.date) # type: ignore
-            self_time12 = cast(bool, self.time12) # type: ignore
             self.__datetime = helper.DTFormat(self_date, self_time12)
             # Get crypto operation arguments
             crypto_opparams = self.__get_opparams()
@@ -296,6 +303,27 @@ class Cmd(cli.CLICommand):
             # Retrieve symbols
             print("Retrieving symbols")
             crypto_cryptocurrs = self.__get_cryptocurrs(crypto, crypto_opparams)
+            # Sell all crypto (if requested)
+            if self_sellall:
+                print("Selling existing crypto")
+                # Fetch balance
+                _balance = crypto.fetch_balance(opparams = crypto_opparams)
+                # Loop thru free
+                for _k, _v in _balance["free"].items():
+                    # Make sure currency is crypto
+                    if _k == self_currency: continue
+                    # Make sure there's a balance
+                    _bal = float(_v) # type: ignore
+                    if _bal <= 0.0: continue
+                    # Sell
+                    try:
+                        crypto.order_sell(f"{_k}/{self_currency}", _bal)
+                        continue
+                    except helper.CLIError as _e:
+                        if _e.etype == helper.CLIErrorType.PRECISION:
+                            continue
+                        _ex = _e
+                    raise _ex
             # Connect signals
             boacon.on_init().connect(self.__r_boacon_on_init)
             boacon.on_final().connect(self.__r_boacon_on_final)
@@ -313,8 +341,6 @@ class Cmd(cli.CLICommand):
             self.__obj_miscops.prompt_finish.connect(self.__r_obj_miscops_prompt_finish)
             params.objects.append(self.__obj_miscops)
             # Create crypto stats handler
-            self_interval = cast(float, self.interval) # type: ignore
-            self_currency = cast(str, self.currency) # type: ignore
             self.__obj_stats = entity.CryptoStats(\
                 crypto, crypto_opparams,\
                 crypto_cryptocurrs, self_currency,\
