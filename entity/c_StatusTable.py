@@ -10,19 +10,21 @@ import engine.app as _app
 import engine.boacon as _boacon
 import engine.helper as _helper
 
-from .c_CryptoStats import\
-    CryptoStats as _CryptoStats
+from .c_CryptoKeeper import\
+    CryptoKeeper as _CryptoKeeper
 
 _WIDTH_ROWNUM = 6
 _WIDTH_SYMBOL = 10
-_WIDTH_PRICE = 20
+_WIDTH_PRICE = 15
+_WIDTH_BALANCE = 15
 _HEADER = _boacon.BCStr((\
     _boacon.BCStr("  #".ljust(_WIDTH_ROWNUM)),\
     _boacon.BCStr("Symbol".ljust(_WIDTH_SYMBOL)),\
-    _boacon.BCStr("Price".ljust(_WIDTH_PRICE))))
+    _boacon.BCStr("Price".ljust(_WIDTH_PRICE)),\
+    _boacon.BCStr("Balance".ljust(_WIDTH_BALANCE))))
 
 _LV_TOP = 2
-_LV_BOTTOM = 2
+_LV_BOTTOM = 4
 _LV_TIMER = 5.0
 
 class StatusTable(_app.AppPaneObject):
@@ -33,13 +35,13 @@ class StatusTable(_app.AppPaneObject):
     #region init
 
     def __init__(self,\
-            crypto:_CryptoStats,\
+            keeper:_CryptoKeeper,\
             dtformat:_helper.DTFormat):
         """
         Initializer for StatusTable
 
-        :params crypto:
-            CryptoStats handler
+        :params keeper:
+            Crypto keeper
         :params dtformat:
             Date/time format
         """
@@ -55,9 +57,9 @@ class StatusTable(_app.AppPaneObject):
         self.__selindex = -1
         self.__selindex_changed_e = _helper.SignalEmitter()
         self.__selindex_changed = _helper.Signal(self.__selindex_changed_e)
-        # Recieve signals
-        self.__crypto = crypto
-        self.__crypto.newstats.connect(self.__r_newstats)
+        # Crypto keeper
+        self.__keeper = keeper
+        self.__keeper.refreshed.connect(self.__r_refreshed)
         # Date/time format
         self.__dtformat = dtformat
 
@@ -83,7 +85,7 @@ class StatusTable(_app.AppPaneObject):
 
     #region receivers
 
-    def __r_newstats(self):
+    def __r_refreshed(self):
         self.__lv_show = True
         self.__lv_update(None)
 
@@ -97,11 +99,11 @@ class StatusTable(_app.AppPaneObject):
         if index is not None:
             self.__lv_index = index
         self.__lv_index = max(-1,\
-            min(len(self.__crypto.stats) - 1, self.__lv_index))
+            min(len(self.__keeper.prices) - 1, self.__lv_index))
         # Update view
         view_height = self._chars.height - _LV_TOP - _LV_BOTTOM
         if view_height > 0:
-            if view_height < len(self.__crypto.stats):
+            if view_height < len(self.__keeper.prices):
                 # Scroll to selected index
                 if self.__lv_offset > self.__lv_index:
                     self.__lv_offset = self.__lv_index
@@ -112,11 +114,11 @@ class StatusTable(_app.AppPaneObject):
                 # Fix offset
                 if self.__lv_offset < 0:
                     self.__lv_offset = 0
-                if (self.__lv_offset + self.__lv_height) > len(self.__crypto.stats):
-                    self.__lv_offset = len(self.__crypto.stats) - self.__lv_height
+                if (self.__lv_offset + self.__lv_height) > len(self.__keeper.prices):
+                    self.__lv_offset = len(self.__keeper.prices) - self.__lv_height
             else:
                 self.__lv_offset = 0
-                self.__lv_height = len(self.__crypto.stats)
+                self.__lv_height = len(self.__keeper.prices)
         else:
             self.__lv_offset = 0
             self.__lv_height = 0
@@ -141,15 +143,14 @@ class StatusTable(_app.AppPaneObject):
         super()._refreshbuffer()
         _SPACE = _boacon.BCChar(0x20)
         _oindex = 0
-        _test_w = self._chars.width
-        _test_h = self._chars.height
         # Ensure size is valid
         if self._chars.height < 3: return
+        # Format noncrypto balance
+        ncbal = f"{self.__keeper.noncrypto} balance: {self.__keeper.noncrypto_balance}"
+        ncbal = ncbal.ljust(self._chars.width)[:self._chars.width]
         # Format date/time of last updated
-        dt = self.__dtformat.create(self.__crypto.stats_updated)
-        dt = f"Last updated {dt} "
-        if len(dt) > self._chars.width:
-            dt = dt[(-self._chars.width):]
+        dt = self.__dtformat.create(self.__keeper.refreshed_when)
+        dt = f"Last updated {dt} ".rjust(self._chars.width)[(-self._chars.width):]
         # Draw header
         _rest = self._chars.width
         for _i in range(min(len(_HEADER), _rest)):
@@ -171,7 +172,8 @@ class StatusTable(_app.AppPaneObject):
             for _i in range(self.__lv_height):
                 _index = self.__lv_offset + _i
                 _rest = self._chars.width
-                _stat = self.__crypto.stats[_index]
+                _price = self.__keeper.prices[_index]
+                _balance = self.__keeper.balances[_index]
                 # Attributes
                 _attr = _boacon.attr_create(\
                     emp = self.__lv_timer > 0.0 and\
@@ -185,15 +187,22 @@ class StatusTable(_app.AppPaneObject):
                     _rest -= 1
                     _oindex += 1
                 # Symbol
-                _str = _stat.currency.ljust(_WIDTH_SYMBOL)
+                _str = _price.name.ljust(_WIDTH_SYMBOL)
                 for _j in range(min(_WIDTH_SYMBOL, _rest)):
                     self._chars[_oindex] = _boacon.BCChar(\
                         ord(_str[_j]), attr = _attr)
                     _rest -= 1
                     _oindex += 1
                 # Price
-                _str = str(_stat.price).ljust(_WIDTH_PRICE)
+                _str = str(_price.value).ljust(_WIDTH_PRICE)
                 for _j in range(min(_WIDTH_PRICE, _rest)):
+                    self._chars[_oindex] = _boacon.BCChar(\
+                        ord(_str[_j]), attr = _attr)
+                    _rest -= 1
+                    _oindex += 1
+                # Balance
+                _str = str(_balance.value).ljust(_WIDTH_BALANCE)
+                for _j in range(min(_WIDTH_BALANCE, _rest)):
                     self._chars[_oindex] = _boacon.BCChar(\
                         ord(_str[_j]), attr = _attr)
                     _rest -= 1
@@ -204,10 +213,22 @@ class StatusTable(_app.AppPaneObject):
                         0x20, attr = _attr)
                     _rest -= 1
                     _oindex += 1
-        # Draw space
-        _rest = len(self._chars) - len(dt) - _oindex
+        # Draw aligning space
+        _rest = len(self._chars) -\
+            len(dt) -\
+            self._chars.width -\
+            len(ncbal) -\
+            _oindex
         while _rest > 0:
             _rest -= 1
+            self._chars[_oindex] = _SPACE
+            _oindex += 1
+        # Draw noncrypto balance
+        for _chr in ncbal:
+            self._chars[_oindex] = _boacon.BCChar(ord(_chr))
+            _oindex += 1
+        # Draw space line
+        for _i in range(self._chars.width):
             self._chars[_oindex] = _SPACE
             _oindex += 1
         # Draw date/time

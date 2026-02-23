@@ -10,8 +10,8 @@ import cry as _cry
 import engine.app as _app
 import engine.boacon as _boacon
 
-from .c_CryptoStats import\
-    CryptoStats as _CryptoStats
+from .c_CryptoKeeper import\
+    CryptoKeeper as _CryptoKeeper
 
 class BuySell(_app.AppPaneObject):
     """
@@ -22,25 +22,25 @@ class BuySell(_app.AppPaneObject):
 
     def __init__(self,\
             opparams:_cry.CryOpParams,\
-            stats:_CryptoStats):
+            keeper:_CryptoKeeper):
         """
         Initializer for BuySell
 
-        :params stats:
-            CryptoStats handler
+        :params keeper:
+            Crypto keeper
         """
         super().__init__()
         # Operation parameters
         self.__opparams = opparams
         # Stats handler 
-        self.__stats = stats
-        self.__stats.newstats.connect(self.__r_stats_newstats)
+        self.__keeper = keeper
+        self.__keeper.refreshed.connect(self.__r_keeper_refreshed)
 
     #endregion
 
     #region receivers
 
-    def __r_stats_newstats(self):
+    def __r_keeper_refreshed(self):
         pass
 
     #endregion

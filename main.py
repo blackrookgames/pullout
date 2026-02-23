@@ -55,7 +55,7 @@ class Cmd(cli.CLICommand):
         self.__datetime:None|helper.DTFormat = None
         # App objects
         self.__obj_miscops:None|entity.MiscOps = None
-        self.__obj_stats:None|entity.CryptoStats = None
+        self.__obj_stats:None|entity.CryptoKeeper = None
         self.__obj_statustable:None|entity.StatusTable = None
         self.__obj_buysell:None|entity.BuySell = None
         self.__obj_keycontrols:None|entity.KeyControls = None
@@ -269,7 +269,7 @@ class Cmd(cli.CLICommand):
 
     def _main(self):
         D_CONSOLE = 10
-        D_STATUS = 40
+        D_STATUS = 50
         D_KEYCONTROLS = 20
         try:
             self_currency = cast(str, self.currency) # type: ignore
@@ -341,7 +341,7 @@ class Cmd(cli.CLICommand):
             self.__obj_miscops.prompt_finish.connect(self.__r_obj_miscops_prompt_finish)
             params.objects.append(self.__obj_miscops)
             # Create crypto stats handler
-            self.__obj_stats = entity.CryptoStats(\
+            self.__obj_stats = entity.CryptoKeeper(\
                 crypto, crypto_opparams,\
                 crypto_cryptocurrs, self_currency,\
                 self_interval)
