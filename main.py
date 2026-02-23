@@ -55,8 +55,8 @@ class Cmd(cli.CLICommand):
         self.__datetime:None|helper.DTFormat = None
         # App objects
         self.__obj_miscops:None|entity.MiscOps = None
-        self.__obj_stats:None|entity.CryptoKeeper = None
-        self.__obj_statustable:None|entity.StatusTable = None
+        self.__obj_keeper:None|entity.CryptoKeeper = None
+        self.__obj_table:None|entity.StatusTable = None
         self.__obj_buysell:None|entity.BuySell = None
         self.__obj_keycontrols:None|entity.KeyControls = None
         # Print cache
@@ -189,10 +189,6 @@ class Cmd(cli.CLICommand):
         for _text in self.__printcache:
             app.console().print(_text)
         self.__printcache.clear()
-
-    def __r_obj_statustable_selindex_changed(self):
-        assert self.__obj_statustable is not None
-        self.__print(str(self.__obj_statustable.selindex))
 
     #endregion
 
@@ -340,22 +336,21 @@ class Cmd(cli.CLICommand):
             self.__obj_miscops = entity.MiscOps()
             self.__obj_miscops.prompt_finish.connect(self.__r_obj_miscops_prompt_finish)
             params.objects.append(self.__obj_miscops)
-            # Create crypto stats handler
-            self.__obj_stats = entity.CryptoKeeper(\
+            # Create crypto keeper
+            self.__obj_keeper = entity.CryptoKeeper(\
                 crypto, crypto_opparams,\
                 crypto_cryptocurrs, self_currency,\
                 self_interval)
-            params.objects.append(self.__obj_stats)
-            # Create status table
-            self.__obj_statustable = entity.StatusTable(self.__obj_stats, self.__datetime)
-            self.__obj_statustable.x.dis0 = panes_left
-            self.__obj_statustable.x.len = D_STATUS
-            self.__obj_statustable.y.dis0 = panes_top
-            self.__obj_statustable.y.dis1 = panes_bottom + D_CONSOLE + 1
-            self.__obj_statustable.selindex_changed.connect(self.__r_obj_statustable_selindex_changed)
-            params.objects.append(self.__obj_statustable)
+            params.objects.append(self.__obj_keeper)
+            # Create table
+            self.__obj_table = entity.StatusTable(self.__obj_keeper, self.__datetime)
+            self.__obj_table.x.dis0 = panes_left
+            self.__obj_table.x.len = D_STATUS
+            self.__obj_table.y.dis0 = panes_top
+            self.__obj_table.y.dis1 = panes_bottom + D_CONSOLE + 1
+            params.objects.append(self.__obj_table)
             # Create buy/sell handler
-            self.__obj_buysell = entity.BuySell(crypto_opparams, self.__obj_stats)
+            self.__obj_buysell = entity.BuySell(crypto, crypto_opparams, self.__obj_keeper, self.__obj_table)
             self.__obj_buysell.x.dis0 = panes_left + D_STATUS + 1
             self.__obj_buysell.x.dis1 = panes_right + D_KEYCONTROLS + 1
             self.__obj_buysell.y.dis0 = panes_top

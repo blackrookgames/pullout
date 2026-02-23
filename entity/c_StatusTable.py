@@ -54,9 +54,10 @@ class StatusTable(_app.AppPaneObject):
         self.__lv_timer = 0.0
         self.__lv_dirty = False
         # Selected index
+        self.__selcrypto:None|str = None
         self.__selindex = -1
-        self.__selindex_changed_e = _helper.SignalEmitter()
-        self.__selindex_changed = _helper.Signal(self.__selindex_changed_e)
+        self.__selection_changed_e = _helper.SignalEmitter()
+        self.__selection_changed = _helper.Signal(self.__selection_changed_e)
         # Crypto keeper
         self.__keeper = keeper
         self.__keeper.refreshed.connect(self.__r_refreshed)
@@ -68,18 +69,25 @@ class StatusTable(_app.AppPaneObject):
     #region properties/signals
 
     @property
+    def selcrypto(self):
+        """
+        Currently selected crypto
+        """
+        return self.__selcrypto
+
+    @property
     def selindex(self):
         """
-        Index of the currently selected item
+        Index of the currently selected crypto
         """
         return self.__selindex
 
     @property
-    def selindex_changed(self):
+    def selection_changed(self):
         """
-        Emitted when the selected index is changed
+        Emitted when the selected crypto is changed
         """
-        return self.__selindex_changed
+        return self.__selection_changed
 
     #endregion
 
@@ -130,7 +138,9 @@ class StatusTable(_app.AppPaneObject):
     def __selindex_set(self, value:int):
         if self.__selindex == value: return
         self.__selindex = value
-        self.__selindex_changed_e.emit()
+        self.__selcrypto = None if (self.__selindex < 0 or self.__selindex >= len(self.__keeper.prices))\
+            else self.__keeper.prices[value].name
+        self.__selection_changed_e.emit()
 
     #endregion
 

@@ -13,3 +13,4 @@ from .c_Signal import *
 from .c_SignalEmitter import *
 from .c_SignalReceiver import *
 from .c_State import *
+from .c_StrUtil import *

@@ -9,9 +9,14 @@ from typing import\
 import cry as _cry
 import engine.app as _app
 import engine.boacon as _boacon
+import engine.helper as _helper
 
+from .c_BuySellEntry import\
+    BuySellEntry as _BuySellEntry
 from .c_CryptoKeeper import\
     CryptoKeeper as _CryptoKeeper
+from .c_StatusTable import\
+    StatusTable as _StatusTable
 
 class BuySell(_app.AppPaneObject):
     """
@@ -21,27 +26,64 @@ class BuySell(_app.AppPaneObject):
     #region init
 
     def __init__(self,\
+            crypto:_cry.Cry,\
             opparams:_cry.CryOpParams,\
-            keeper:_CryptoKeeper):
+            keeper:_CryptoKeeper,\
+            table:_StatusTable):
         """
         Initializer for BuySell
 
+        :params crypto:
+            Crypto operation handler
+        :params opparams:
+            Parameters for Crypto-related operations
         :params keeper:
             Crypto keeper
+        :params table:
+            Crypto status table
         """
         super().__init__()
-        # Operation parameters
+        # Crypto operation handler
+        self.__crypto = crypto
         self.__opparams = opparams
-        # Stats handler 
+        # Crypto keeper
         self.__keeper = keeper
         self.__keeper.refreshed.connect(self.__r_keeper_refreshed)
+        # Status table
+        self.__table = table
+        self.__table.selection_changed.connect(self.__r_table_selection_changed)
+        # Crypto entries
+        self.__entries:dict[str, _BuySellEntry] = {}
+        # Active crypto (one being displayed)
+        self.__active:None|str = None
 
     #endregion
 
     #region receivers
 
     def __r_keeper_refreshed(self):
-        pass
+        # Add entries (if needed)
+        if len(self.__entries) == 0:
+            for _crypto in self.__keeper.prices:
+                _entry = _BuySellEntry(self.__crypto, self.__opparams, self.__keeper, _crypto.name)
+                self.__entries[_crypto.name] = _entry
+        # Update entries
+        for _entry in self.__entries.values():
+            _entry._update()
+        # If no crypto is active, find one to be active
+        if self.__active is None:
+            if len(self.__keeper.prices) > 0:
+                self.__active = self.__keeper.prices[0].name
+        # Update character buffer
+        self._update_chrs()
+
+    def __r_table_selection_changed(self):
+        # Only change active is a crypto is being selected
+        if self.__table.selcrypto is None: return
+        # Change active crypto
+        self.__active = self.__table.selcrypto
+        # Update character buffer
+        self._update_chrs()
 
     #endregion
 
@@ -59,6 +101,30 @@ class BuySell(_app.AppPaneObject):
     
     def _refreshbuffer(self):
         super()._refreshbuffer()
+        _SPACE = _boacon.BCChar(0x20)
+        _COLUMN = 15
+        oindex = 0
+        def _printline(_text:str):
+            nonlocal self, oindex
+            _text = _helper.StrUtil.ljusttrun(_text, self._chars.width)
+            for _i in range(min(len(_text), len(self._chars) - oindex)):
+                self._chars[oindex] = _boacon.BCChar(ord(_text[_i]))
+                oindex += 1
+        # Display active crypto
+        if self.__active is not None and self.__active in self.__entries:
+            _entry = self.__entries[self.__active]
+            # Name
+            _printline(f"{" Name:".ljust(_COLUMN)}{self.__active}")
+            # Price
+            _pcntinc = "" if (_entry.priceinc is None)\
+                else ('-' if (_entry.priceinc == 0) else ('\u2193' if (_entry.priceinc < 0) else '\u2191'))
+            _printline(f"{" Price:".ljust(_COLUMN)}{_entry.price} {_pcntinc}")
+            # Balance
+            _printline(f"{" Balance:".ljust(_COLUMN)}{_entry.balance}")
+        # Fill rest
+        if oindex < len(self._chars):
+            self._chars[oindex] = _SPACE
+            oindex += 1
 
     #endregion
 
@@ -73,14 +139,4 @@ class BuySell(_app.AppPaneObject):
     def _deactivated(self):
         super()._deactivated()
 
-    #endregion
-
-    #region BCPane
-    
-    def _resolved(self):
-        super()._resolved()
-
-    def _draw(self, setchr:_Callable[[int, int, _boacon.BCChar], None]):
-        super()._draw(setchr)
-        
     #endregion
