@@ -63,13 +63,43 @@ class BuySell(_app.AppPaneObject):
 
     def __r_keeper_refreshed(self):
         # Add entries (if needed)
+        updateentries = True
         if len(self.__entries) == 0:
+            # Add entries
+            _noncryptocount = 0
             for _crypto in self.__keeper.prices:
-                _entry = _BuySellEntry(self.__crypto, self.__opparams, self.__keeper, _crypto.name)
+                _entry = _BuySellEntry(_crypto.name)
+                # Price
+                _entry.price = _crypto.value
+                # Balance
+                _entry.balance = self.__keeper.balances[_crypto.name].value
+                if _entry.balance > 0.0: _entry.investing = True
+                else: _noncryptocount += 1
+                # Add entry
                 self.__entries[_crypto.name] = _entry
+            # Compute non-crypto fractions
+            if _noncryptocount > 0:
+                _fraction = 1.0 / _noncryptocount
+                for _entry in self.__entries.values():
+                    if not _entry.investing: _entry.noncrypto = _fraction
+            # Don't update entries
+            updateentries = False
         # Update entries
-        for _entry in self.__entries.values():
-            _entry._update()
+        if updateentries:
+            for _entry in self.__entries.values():
+                # Skip if compromised
+                if _entry.compromised:
+                    continue
+                if not (_entry.name in self.__keeper.prices):
+                    _entry.compromised = True
+                    continue
+                # Previous
+                _prev_price = _entry.price
+                _prev_balance = _entry.balance
+                # Update
+                _entry.price = self.__keeper.prices[_entry.name].value
+                _entry.balance = self.__keeper.balances[_entry.name].value
+                _entry.priceinc = _entry.price - _prev_price
         # If no crypto is active, find one to be active
         if self.__active is None:
             if len(self.__keeper.prices) > 0:
@@ -119,8 +149,11 @@ class BuySell(_app.AppPaneObject):
             _pcntinc = "" if (_entry.priceinc is None)\
                 else ('-' if (_entry.priceinc == 0) else ('\u2193' if (_entry.priceinc < 0) else '\u2191'))
             _printline(f"{" Price:".ljust(_COLUMN)}{_entry.price} {_pcntinc}")
-            # Balance
-            _printline(f"{" Balance:".ljust(_COLUMN)}{_entry.balance}")
+            # Balance or fraction
+            if _entry.balance > 0.0:
+                _printline(f"{" Balance:".ljust(_COLUMN)}{_entry.balance}")
+            else: 
+                _printline(f"{" Non-Crypto:".ljust(_COLUMN)}{round(_entry.noncrypto * 100.0, 5)}%")
         # Fill rest
         if oindex < len(self._chars):
             self._chars[oindex] = _SPACE

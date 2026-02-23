@@ -5,4 +5,6 @@ from .c_CryptoKeeperListAccess import *
 from .c_CryptoKeeperListItem import *
 from .c_KeyControls import *
 from .c_MiscOps import *
+from .c_StaticTableView import *
+from .c_StaticTableViewRows import *
 from .c_StatusTable import *

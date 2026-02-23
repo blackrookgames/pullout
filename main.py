@@ -58,6 +58,7 @@ class Cmd(cli.CLICommand):
         self.__obj_keeper:None|entity.CryptoKeeper = None
         self.__obj_table:None|entity.StatusTable = None
         self.__obj_buysell:None|entity.BuySell = None
+        self.__obj_settingsview:None|entity.StaticTableView = None
         self.__obj_keycontrols:None|entity.KeyControls = None
         # Print cache
         self.__printcache = []
@@ -111,6 +112,15 @@ class Cmd(cli.CLICommand):
         parse = cli.CLIParseUtil.to_float,\
         default = 1.0)
     
+    __date = cli.CLIOptionWArgDef(\
+        name = "date",\
+        desc = "Date format (ex: MM/DD/YY, DD/MM/YYYY, YY/MM/DD)",\
+        parse = parse_date,\
+        default = "MM/DD/YYYY")
+    __time12 = cli.CLIOptionFlagDef(\
+        name = "time12",\
+        desc = "If specified, time is displayed in a 12-hour format")
+
     __ddos_delay = cli.CLIOptionWArgDef(\
         name = "ddos_delay",\
         desc = "Delay after DDOS error",\
@@ -153,23 +163,20 @@ class Cmd(cli.CLICommand):
         parse = cli.CLIParseUtil.to_int,\
         default = 0)
 
-    __date = cli.CLIOptionWArgDef(\
-        name = "date",\
-        desc = "Date format (ex: MM/DD/YY, DD/MM/YYYY, YY/MM/DD)",\
-        parse = parse_date,\
-        default = "MM/DD/YYYY")
-    __time12 = cli.CLIOptionFlagDef(\
-        name = "time12",\
-        desc = "If specified, time is displayed in a 12-hour format")
-
     #endregion
 
     #region recievers
 
     def __r_boacon_on_init(self):
+        # Connect signals
         boacon.postdraw().connect(self.__r_boacon_post_draw)
+        # Set nav controls for settings view
+        assert self.__obj_settingsview is not None        
+        self.__obj_settingsview.nav_up = curses.KEY_LEFT    
+        self.__obj_settingsview.nav_down = curses.KEY_RIGHT
 
     def __r_boacon_on_final(self):
+        # Disconnect signals
         boacon.postdraw().disconnect(self.__r_boacon_post_draw)
 
     def __r_boacon_post_draw(self, win:curses.window):
@@ -199,18 +206,6 @@ class Cmd(cli.CLICommand):
         if self.__obj_miscops.prompting:
             self.__printcache.append(text)
         else: app.console().print(text)
-
-    def __get_opparams(self):
-        crypto_opparams = cry.CryOpParams()
-        crypto_opparams.ddos_delay = cast(float,\
-            self.ddos_delay) # type: ignore
-        crypto_opparams.ddos_max = cast(int,\
-            self.ddos_max) # type: ignore
-        crypto_opparams.net_delay = cast(float,\
-            self.net_delay) # type: ignore
-        crypto_opparams.net_max = cast(int,\
-            self.net_max) # type: ignore
-        return crypto_opparams
 
     def __get_cryptocurrs(self,\
             cryp:cry.Cry,\
@@ -266,17 +261,22 @@ class Cmd(cli.CLICommand):
     def _main(self):
         D_CONSOLE = 10
         D_STATUS = 50
+        D_BUYSELL = 30
         D_KEYCONTROLS = 20
         try:
             self_currency = cast(str, self.currency) # type: ignore
             self_sellall = cast(bool, self.sellall) # type: ignore
             self_interval = cast(float, self.interval) # type: ignore
+            self_date = cast(str, self.date) # type: ignore
+            self_time12 = cast(bool, self.time12) # type: ignore
+            self_ddos_delay = cast(float, self.ddos_delay) # type: ignore
+            self_ddos_max = cast(int, self.ddos_max) # type: ignore
+            self_net_delay = cast(float, self.net_delay) # type: ignore
+            self_net_max = cast(int, self.net_max) # type: ignore
             self_off_left = cast(int, self.off_left) # type: ignore
             self_off_right = cast(int, self.off_right) # type: ignore
             self_off_top = cast(int, self.off_top) # type: ignore
             self_off_bottom = cast(int, self.off_bottom) # type: ignore
-            self_date = cast(str, self.date) # type: ignore
-            self_time12 = cast(bool, self.time12) # type: ignore
             # Update offsets
             self.__vis_left = max(0, self_off_left)
             self.__vis_right = max(0, self_off_right)
@@ -285,7 +285,11 @@ class Cmd(cli.CLICommand):
             # Get date/time format
             self.__datetime = helper.DTFormat(self_date, self_time12)
             # Get crypto operation arguments
-            crypto_opparams = self.__get_opparams()
+            crypto_opparams = cry.CryOpParams()
+            crypto_opparams.ddos_delay = self_ddos_delay
+            crypto_opparams.ddos_max = self_ddos_max
+            crypto_opparams.net_delay = self_net_delay
+            crypto_opparams.net_max = self_net_max
             # Load API
             print("Loading API")
             crypto_api = cry.CryAPI(Path(sys.argv[0]).resolve()\
@@ -352,20 +356,35 @@ class Cmd(cli.CLICommand):
             # Create buy/sell handler
             self.__obj_buysell = entity.BuySell(crypto, crypto_opparams, self.__obj_keeper, self.__obj_table)
             self.__obj_buysell.x.dis0 = panes_left + D_STATUS + 1
-            self.__obj_buysell.x.dis1 = panes_right + D_KEYCONTROLS + 1
+            self.__obj_buysell.x.len = D_BUYSELL
             self.__obj_buysell.y.dis0 = panes_top
             self.__obj_buysell.y.dis1 = panes_bottom + D_CONSOLE + 1
             params.objects.append(self.__obj_buysell)
+            # Create settings view
+            _settingsview_rows = [\
+                [ " Interval", f"{self_interval} sec" ],\
+                [ " Date Format", self_date ],\
+                [ " 12 Hours", self_time12 ],\
+                [ " DDOS Delay", f"{self_ddos_delay} sec" ],\
+                [ " DDOS Max", f"{self_ddos_max} {("retries" if (self_ddos_max != 1) else "retry")}" ],\
+                [ " Net Delay", f"{self_net_delay} sec" ],\
+                [ " Net Max", f"{self_net_max} {("retries" if (self_net_max != 1) else "retry")}" ],]
+            self.__obj_settingsview = entity.StaticTableView([ 20, 100 ], rows = _settingsview_rows)
+            self.__obj_settingsview.x.dis0 = panes_left + D_STATUS + 1 + D_BUYSELL + 1
+            self.__obj_settingsview.x.dis1 = panes_right
+            self.__obj_settingsview.y.dis0 = panes_top
+            self.__obj_settingsview.y.dis1 = panes_bottom + D_CONSOLE + 1
+            params.objects.append(self.__obj_settingsview)
             # Create keyboard control display
             self.__obj_keycontrols = entity.KeyControls()
             self.__obj_keycontrols.x.len = D_KEYCONTROLS
             self.__obj_keycontrols.x.dis1 = panes_right
-            self.__obj_keycontrols.y.dis0 = panes_top
-            self.__obj_keycontrols.y.dis1 = panes_bottom + D_CONSOLE + 1
+            self.__obj_keycontrols.y.len = D_CONSOLE
+            self.__obj_keycontrols.y.dis1 = panes_bottom
             params.objects.append(self.__obj_keycontrols)
             # Setup console pane
             params.con_left = panes_left
-            params.con_right = panes_right
+            params.con_right = panes_right + D_KEYCONTROLS + 1
             params.con_top = None
             params.con_bottom = panes_bottom
             params.con_height = D_CONSOLE

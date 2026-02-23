@@ -153,98 +153,102 @@ class StatusTable(_app.AppPaneObject):
         super()._refreshbuffer()
         _SPACE = _boacon.BCChar(0x20)
         _oindex = 0
-        # Ensure size is valid
-        if self._chars.height < 3: return
-        # Format noncrypto balance
-        ncbal = f"{self.__keeper.noncrypto} balance: {self.__keeper.noncrypto_balance}"
-        ncbal = ncbal.ljust(self._chars.width)[:self._chars.width]
-        # Format date/time of last updated
-        dt = self.__dtformat.create(self.__keeper.refreshed_when)
-        dt = f"Last updated {dt} ".rjust(self._chars.width)[(-self._chars.width):]
-        # Draw header
-        _rest = self._chars.width
-        for _i in range(min(len(_HEADER), _rest)):
-            self._chars[_oindex] = _HEADER[_i]
-            _rest -= 1
-            _oindex += 1
-        while _rest > 0:
-            self._chars[_oindex] = _SPACE
-            _rest -= 1
-            _oindex += 1
-        # Draw space
-        _rest = (_LV_TOP * self._chars.width) - _oindex
-        while _rest > 0:
-            _rest -= 1
-            self._chars[_oindex] = _SPACE
-            _oindex += 1
-        # Draw rows
-        if self.__lv_show:
-            for _i in range(self.__lv_height):
-                _index = self.__lv_offset + _i
-                _rest = self._chars.width
-                _price = self.__keeper.prices[_index]
-                _balance = self.__keeper.balances[_index]
-                # Attributes
-                _attr = _boacon.attr_create(\
-                    emp = self.__lv_timer > 0.0 and\
-                        _index == self.__lv_index)
-                # Row number
-                _str = str(_index + 1).rjust(3).ljust(_WIDTH_ROWNUM)
-                for _j in range(min(_WIDTH_ROWNUM, _rest)):
-                    self._chars[_oindex] = _boacon.BCChar(\
-                        ord(_str[-_WIDTH_ROWNUM + _j]),\
-                        attr = _attr)
-                    _rest -= 1
-                    _oindex += 1
-                # Symbol
-                _str = _price.name.ljust(_WIDTH_SYMBOL)
-                for _j in range(min(_WIDTH_SYMBOL, _rest)):
-                    self._chars[_oindex] = _boacon.BCChar(\
-                        ord(_str[_j]), attr = _attr)
-                    _rest -= 1
-                    _oindex += 1
-                # Price
-                _str = str(_price.value).ljust(_WIDTH_PRICE)
-                for _j in range(min(_WIDTH_PRICE, _rest)):
-                    self._chars[_oindex] = _boacon.BCChar(\
-                        ord(_str[_j]), attr = _attr)
-                    _rest -= 1
-                    _oindex += 1
-                # Balance
-                _str = str(_balance.value).ljust(_WIDTH_BALANCE)
-                for _j in range(min(_WIDTH_BALANCE, _rest)):
-                    self._chars[_oindex] = _boacon.BCChar(\
-                        ord(_str[_j]), attr = _attr)
-                    _rest -= 1
-                    _oindex += 1
-                # Fill rest of row
-                while _rest > 0:
-                    self._chars[_oindex] = _boacon.BCChar(\
-                        0x20, attr = _attr)
-                    _rest -= 1
-                    _oindex += 1
-        # Draw aligning space
-        _rest = len(self._chars) -\
-            len(dt) -\
-            self._chars.width -\
-            len(ncbal) -\
-            _oindex
-        while _rest > 0:
-            _rest -= 1
-            self._chars[_oindex] = _SPACE
-            _oindex += 1
-        # Draw noncrypto balance
-        for _chr in ncbal:
-            self._chars[_oindex] = _boacon.BCChar(ord(_chr))
-            _oindex += 1
-        # Draw space line
-        for _i in range(self._chars.width):
-            self._chars[_oindex] = _SPACE
-            _oindex += 1
-        # Draw date/time
-        for _chr in dt:
-            self._chars[_oindex] = _boacon.BCChar(ord(_chr))
-            _oindex += 1
+        if self._chars.height >= (_LV_TOP + _LV_BOTTOM):
+            # Format noncrypto balance
+            ncbal = f"{self.__keeper.noncrypto} balance: {self.__keeper.noncrypto_balance}"
+            ncbal = ncbal.ljust(self._chars.width)[:self._chars.width]
+            # Format date/time of last updated
+            dt = self.__dtformat.create(self.__keeper.refreshed_when)
+            dt = f"Last updated {dt} ".rjust(self._chars.width)[(-self._chars.width):]
+            # Draw header
+            _rest = self._chars.width
+            for _i in range(min(len(_HEADER), _rest)):
+                self._chars[_oindex] = _HEADER[_i]
+                _rest -= 1
+                _oindex += 1
+            while _rest > 0:
+                self._chars[_oindex] = _SPACE
+                _rest -= 1
+                _oindex += 1
+            # Draw space
+            _rest = (_LV_TOP * self._chars.width) - _oindex
+            while _rest > 0:
+                _rest -= 1
+                self._chars[_oindex] = _SPACE
+                _oindex += 1
+            # Draw rows
+            if self.__lv_show:
+                for _i in range(self.__lv_height):
+                    _index = self.__lv_offset + _i
+                    _rest = self._chars.width
+                    _price = self.__keeper.prices[_index]
+                    _balance = self.__keeper.balances[_index]
+                    # Attributes
+                    _attr = _boacon.attr_create(\
+                        emp = self.__lv_timer > 0.0 and\
+                            _index == self.__lv_index)
+                    # Row number
+                    _str = str(_index + 1).rjust(3).ljust(_WIDTH_ROWNUM)
+                    for _j in range(min(_WIDTH_ROWNUM, _rest)):
+                        self._chars[_oindex] = _boacon.BCChar(\
+                            ord(_str[-_WIDTH_ROWNUM + _j]),\
+                            attr = _attr)
+                        _rest -= 1
+                        _oindex += 1
+                    # Symbol
+                    _str = _price.name.ljust(_WIDTH_SYMBOL)
+                    for _j in range(min(_WIDTH_SYMBOL, _rest)):
+                        self._chars[_oindex] = _boacon.BCChar(\
+                            ord(_str[_j]), attr = _attr)
+                        _rest -= 1
+                        _oindex += 1
+                    # Price
+                    _str = str(_price.value).ljust(_WIDTH_PRICE)
+                    for _j in range(min(_WIDTH_PRICE, _rest)):
+                        self._chars[_oindex] = _boacon.BCChar(\
+                            ord(_str[_j]), attr = _attr)
+                        _rest -= 1
+                        _oindex += 1
+                    # Balance
+                    _str = str(_balance.value).ljust(_WIDTH_BALANCE)
+                    for _j in range(min(_WIDTH_BALANCE, _rest)):
+                        self._chars[_oindex] = _boacon.BCChar(\
+                            ord(_str[_j]), attr = _attr)
+                        _rest -= 1
+                        _oindex += 1
+                    # Fill rest of row
+                    while _rest > 0:
+                        self._chars[_oindex] = _boacon.BCChar(\
+                            0x20, attr = _attr)
+                        _rest -= 1
+                        _oindex += 1
+            # Draw aligning space
+            _rest = len(self._chars) -\
+                len(dt) -\
+                self._chars.width -\
+                len(ncbal) -\
+                _oindex
+            while _rest > 0:
+                _rest -= 1
+                self._chars[_oindex] = _SPACE
+                _oindex += 1
+            # Draw noncrypto balance
+            for _chr in ncbal:
+                self._chars[_oindex] = _boacon.BCChar(ord(_chr))
+                _oindex += 1
+            # Draw space line
+            for _i in range(self._chars.width):
+                self._chars[_oindex] = _SPACE
+                _oindex += 1
+            # Draw date/time
+            for _chr in dt:
+                self._chars[_oindex] = _boacon.BCChar(ord(_chr))
+                _oindex += 1
+        else:
+            # Fill entire pane with spaces
+            while _oindex < len(self._chars):
+                self._chars[_oindex] = _SPACE
+                _oindex += 1
 
     #endregion
 
