@@ -1,4 +1,6 @@
 import curses
+import os
+import shutil
 import sys
 
 from datetime import datetime
@@ -10,6 +12,7 @@ import engine.app as app
 import engine.boacon as boacon
 import engine.cli as cli
 import engine.helper as helper
+import engine.ioutil as ioutil
 import entity
 
 #region helper functions
@@ -46,6 +49,12 @@ class Cmd(cli.CLICommand):
 
     def __init__(self):
         super().__init__()
+        # Determine paths
+        self.__path = Path(sys.argv[0]).resolve().parent
+        self.__path_log = self.__path.joinpath("log")
+        self.__path_log_bin:None|Path = None
+        self.__path_secret = self.__path.joinpath("secret")
+        self.__path_secret_json = self.__path_secret.joinpath("cdp_api_key.json")
         # Visual offsets
         self.__vis_left = 0
         self.__vis_right = 0
@@ -60,6 +69,9 @@ class Cmd(cli.CLICommand):
         self.__obj_buysell:None|entity.BuySell = None
         self.__obj_settingsview:None|entity.StaticTableView = None
         self.__obj_keycontrols:None|entity.KeyControls = None
+        # Logging
+        self.__logging_entrycount = 0
+        self.__logging_files:list[Path] = []
         # Print cache
         self.__printcache = []
 
@@ -104,7 +116,7 @@ class Cmd(cli.CLICommand):
     
     __sellall = cli.CLIOptionFlagDef(\
         name = "sellall",\
-        desc = "Whether or not to sell all existing crypto")
+        desc = "If specified, all existing crypto will be sold")
     
     __interval = cli.CLIOptionWArgDef(\
         name = "interval",\
@@ -163,6 +175,23 @@ class Cmd(cli.CLICommand):
         parse = cli.CLIParseUtil.to_int,\
         default = 0)
 
+    __log_clear = cli.CLIOptionFlagDef(\
+        name = "log_clear",\
+        desc = "If specified, existing log information will be cleared")
+    __log_entries = cli.CLIOptionWArgDef(\
+        name = "log_entries",\
+        desc = "Maximum number of entries per log file. " +\
+            "If this value is less than or equal to zero (not recommended), a single file will contain all entries. ",\
+        parse = cli.CLIParseUtil.to_int,\
+        default = 1000)
+    __log_files = cli.CLIOptionWArgDef(\
+        name = "log_files",\
+        desc = "Maximum number of log files. Once the maximum is reached, older log files will begin to be deleted. " +\
+            "If this value is less than or equal to zero, no log files will be deleted. " +\
+            "This value is ignored if --log_entries is less than or equal to zero.",\
+        parse = cli.CLIParseUtil.to_int,\
+        default = 750)
+
     #endregion
 
     #region recievers
@@ -192,6 +221,9 @@ class Cmd(cli.CLICommand):
                 dtstr)
         except curses.error: pass
 
+    def __r_obj_keeper_refreshed(self):
+        self.__log_append()
+
     def __r_obj_miscops_prompt_finish(self):
         for _text in self.__printcache:
             app.console().print(_text)
@@ -206,6 +238,61 @@ class Cmd(cli.CLICommand):
         if self.__obj_miscops.prompting:
             self.__printcache.append(text)
         else: app.console().print(text)
+
+    def __log_init(self):
+        try:
+            # Make sure directory exists
+            if not os.path.isdir(self.__path_log):
+                os.mkdir(self.__path_log)
+            # Clear contents (if requested)
+            if self.log_clear: # type: ignore
+                for _path in self.__path_log.iterdir():
+                    if os.path.isfile(_path): os.remove(_path)
+                    elif os.path.isdir(_path): shutil.rmtree(_path)
+            # Success!!!
+            return
+        except Exception as _e: e = helper.CLIError(_e)
+        raise e
+    
+    def __log_append(self):
+        assert self.__obj_keeper is not None
+        self_log_entries = cast(int, self.log_entries) # type: ignore
+        self_log_files = cast(int, self.log_files) # type: ignore
+        # Create string for date/time
+        _dt = self.__obj_keeper.refreshed_when
+        _dtstr = f"{_dt.year:04}{_dt.month:02}{_dt.day:02}{_dt.hour:02}{_dt.minute:02}{_dt.microsecond:06}"
+        # Create log (if needed)
+        _maxxed = self_log_entries > 0 and (self.__logging_entrycount + 1) > self_log_entries
+        if self.__path_log_bin is None or _maxxed:
+            # Reset entry count
+            self.__logging_entrycount = 0
+            # Determine path
+            self.__path_log_bin = self.__path_log.joinpath(f"{_dtstr}.bin")
+            # Delete log file (if it exists)
+            if os.path.isfile(self.__path_log_bin):
+                os.remove(self.__path_log_bin)
+            # Recreate log file
+            with open(self.__path_log_bin, 'wb') as f:
+                ioutil.IOStrUtil.safestr_write(str(len(self.__obj_keeper.prices)), f)
+                for _price in self.__obj_keeper.prices:
+                    ioutil.IOStrUtil.safestr_write(str(_price.name), f)
+            # Add to files (if needed)
+            if self_log_files > 0:
+                # Delete old file (if needed)
+                if len(self.__logging_files) >= self_log_files:
+                    path = self.__logging_files.pop(0)
+                    os.remove(path)
+                # Add new file
+                self.__logging_files.append(self.__path_log_bin)
+        # Append content
+        with open(self.__path_log_bin, 'ab') as f:
+            ioutil.IOStrUtil.safestr_write(_dtstr, f)
+            for _price in self.__obj_keeper.prices:
+                ioutil.IOStrUtil.safestr_write(str(_price.value), f)
+                ioutil.IOStrUtil.safestr_write(str(_price.value), f)
+        # Increase entry count
+        if self_log_entries > 0:
+            self.__logging_entrycount += 1
 
     def __get_cryptocurrs(self,\
             cryp:cry.Cry,\
@@ -277,6 +364,8 @@ class Cmd(cli.CLICommand):
             self_off_right = cast(int, self.off_right) # type: ignore
             self_off_top = cast(int, self.off_top) # type: ignore
             self_off_bottom = cast(int, self.off_bottom) # type: ignore
+            self_log_entries = cast(int, self.log_entries) # type: ignore
+            self_log_files = cast(int, self.log_files) # type: ignore
             # Update offsets
             self.__vis_left = max(0, self_off_left)
             self.__vis_right = max(0, self_off_right)
@@ -290,10 +379,12 @@ class Cmd(cli.CLICommand):
             crypto_opparams.ddos_max = self_ddos_max
             crypto_opparams.net_delay = self_net_delay
             crypto_opparams.net_max = self_net_max
+            # Initialize log directory
+            print("Initializing log directory")
+            self.__log_init()
             # Load API
             print("Loading API")
-            crypto_api = cry.CryAPI(Path(sys.argv[0]).resolve()\
-                .parent.joinpath("secret").joinpath("cdp_api_key.json"))
+            crypto_api = cry.CryAPI(self.__path_secret_json)
             # Create exchange instance
             print("Creating exchange instance")
             crypto = cry.Cry(crypto_api)
@@ -345,6 +436,7 @@ class Cmd(cli.CLICommand):
                 crypto, crypto_opparams,\
                 crypto_cryptocurrs, self_currency,\
                 self_interval)
+            self.__obj_keeper.refreshed.connect(self.__r_obj_keeper_refreshed)
             params.objects.append(self.__obj_keeper)
             # Create table
             self.__obj_table = entity.StatusTable(self.__obj_keeper, self.__datetime)
@@ -368,7 +460,9 @@ class Cmd(cli.CLICommand):
                 [ " DDOS Delay", f"{self_ddos_delay} sec" ],\
                 [ " DDOS Max", f"{self_ddos_max} {("retries" if (self_ddos_max != 1) else "retry")}" ],\
                 [ " Net Delay", f"{self_net_delay} sec" ],\
-                [ " Net Max", f"{self_net_max} {("retries" if (self_net_max != 1) else "retry")}" ],]
+                [ " Net Max", f"{self_net_max} {("retries" if (self_net_max != 1) else "retry")}" ],\
+                [ " Log Entry Max", f"{('\u221E' if (self_log_entries <= 0) else f"{self_log_entries} per-file")}" ],\
+                [ " Log File Max", f"{('\u221E' if (self_log_files <= 0) else f"{self_log_files} file(s)")}" ],]
             self.__obj_settingsview = entity.StaticTableView([ 20, 100 ], rows = _settingsview_rows)
             self.__obj_settingsview.x.dis0 = panes_left + D_STATUS + 1 + D_BUYSELL + 1
             self.__obj_settingsview.x.dis1 = panes_right

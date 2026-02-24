@@ -7,4 +7,4 @@ fi
 
 python=$1
 
-$python ./main.py --ex_pfx USD --time12 --count 5 --interval 15 --sellall
+$python ./main.py --ex_pfx USD --time12 --count 5 --interval 15 --sellall --log_clear
