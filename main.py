@@ -45,6 +45,10 @@ def parse_date(input:str):
 
 class Cmd(cli.CLICommand):
 
+    @property
+    def _desc(self):
+        return "Automated crypto investment program"
+
     #region init
 
     def __init__(self):
@@ -260,7 +264,7 @@ class Cmd(cli.CLICommand):
         self_log_files = cast(int, self.log_files) # type: ignore
         # Create string for date/time
         _dt = self.__obj_keeper.refreshed_when
-        _dtstr = f"{_dt.year:04}{_dt.month:02}{_dt.day:02}{_dt.hour:02}{_dt.minute:02}{_dt.microsecond:06}"
+        _dtstr = f"{_dt.year:04}{_dt.month:02}{_dt.day:02}{_dt.hour:02}{_dt.minute:02}{_dt.second:02}{_dt.microsecond:06}"
         # Create log (if needed)
         _maxxed = self_log_entries > 0 and (self.__logging_entrycount + 1) > self_log_entries
         if self.__path_log_bin is None or _maxxed:
@@ -288,7 +292,6 @@ class Cmd(cli.CLICommand):
         with open(self.__path_log_bin, 'ab') as f:
             ioutil.IOStrUtil.safestr_write(_dtstr, f)
             for _price in self.__obj_keeper.prices:
-                ioutil.IOStrUtil.safestr_write(str(_price.value), f)
                 ioutil.IOStrUtil.safestr_write(str(_price.value), f)
         # Increase entry count
         if self_log_entries > 0:

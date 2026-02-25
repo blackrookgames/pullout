@@ -2,6 +2,7 @@ from .c_BadOpError import *
 from .c_CLIError import *
 from .c_CLIErrorType import *
 from .c_DTFormat import *
+from .c_DTUtil import *
 from .c_const import *
 from .c_ErrorUtil import *
 from .c_LockedList import *
