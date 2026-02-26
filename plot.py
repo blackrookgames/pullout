@@ -15,6 +15,7 @@ import engine.cli as cli
 import engine.helper as helper
 import engine.ioutil as ioutil
 import entity
+import font
 
 TItem = TypeVar('TItem')
 TValue = TypeVar('TValue')
@@ -27,14 +28,6 @@ def parse_path(input:str):
         print(f"\"{input}\" is not a valid path.", file = sys.stderr)
         return False, None
     return True, path
-
-def parse_date(input:str):
-    dformat = input.\
-        replace("YYYY", "{0:04}").\
-        replace("YY", "{1:02}").\
-        replace("MM", "{2:02}").\
-        replace("DD", "{3:02}")
-    return True, dformat
 
 #endregion
 
@@ -82,7 +75,6 @@ class Cmd(cli.CLICommand):
     __date = cli.CLIOptionWArgDef(\
         name = "date",\
         desc = "Date format (ex: MM/DD/YY, DD/MM/YYYY, YY/MM/DD)",\
-        parse = parse_date,\
         default = "MM/DD/YYYY")
     __time12 = cli.CLIOptionFlagDef(\
         name = "time12",\
@@ -293,27 +285,50 @@ class Cmd(cli.CLICommand):
             y_pixels = 32 if (self_y_pixels <= 0) else self_y_pixels
             y_minmax = self.__compute_minmax(lambda t: t[1], entries)
             assert y_minmax is not None
-            y_ups = self.__compute_ups(lambda v: int(v), y_minmax[0], y_minmax[1], y_spaces, 0.00001)
+            y_ups = self.__compute_ups(lambda v: v, y_minmax[0], y_minmax[1], y_spaces, 0.00001)
             y_spaces = self.__compute_spaces(y_minmax[0], y_minmax[1], y_ups)
             y_p0 = math.floor(y_minmax[0] / y_ups) * y_ups
             y_p1 = y_p0 + y_spaces * y_ups
+            # Generating X-labels
+            print("Generating X-labels")
+            x_labels:list[str] = []
+            x_labels_inc = (font.CHAR_HEIGHT * 2 + x_pixels - 1) // x_pixels
+            _len = 0
+            for _i in range(0, x_spaces, x_labels_inc):
+                _str = dtformat.create(helper.DTUtil.from_micro2000(x_p0 + x_ups * _i))
+                if _len < len(_str): _len = len(_str)
+                x_labels.append(_str)
+            x_labels_w = _len * font.CHAR_WIDTH
+            # Generating Y-labels
+            print("Generating Y-labels")
+            y_labels:list[str] = []
+            y_labels_inc = (font.CHAR_HEIGHT * 2 + y_pixels - 1) // y_pixels
+            _len = 0
+            for _i in range(0, y_spaces, y_labels_inc):
+                _str = f"{round(y_p0 + y_ups * _i, 6)} {self_crypto}"
+                if _len < len(_str): _len = len(_str)
+                y_labels.append(_str)
+            y_labels_w = _len * font.CHAR_WIDTH
             # Create image
-            plot_x = 0
-            plot_y = 0
-            plot_w = x_pixels * x_spaces + 1 # Including border
-            plot_h = y_pixels * y_spaces + 1 # Including border
-            image = Image.new('RGBA', (plot_w, plot_h))
             color_bg = self.__from_rgba(self_color_bg)
             color_grid = self.__from_rgba(self_color_grid)
             color_plot = self.__from_rgba(self_color_plot)
             color_text = self.__from_rgba(self_color_text)
+            plot_w = x_pixels * x_spaces + 1 # Including border
+            plot_h = y_pixels * y_spaces + 1 # Including border
+            plot_x = 2 + y_labels_w + 2
+            plot_y = 2
+            image_w = plot_x + plot_w + 2
+            image_h = plot_y + plot_h + 2 + x_labels_w + 2
+            image = Image.new('RGBA', (image_w, image_h), color_bg)
             # Draw grid lines
             print("Drawing grid lines")
-            for _y in range(plot_h):
-                _y_line = (_y % y_pixels) == 0
+            for _x in range(0, plot_w, x_pixels):
+                for _y in range(plot_h):
+                    image.putpixel((plot_x + _x, plot_y + _y), color_grid)
+            for _y in range(0, plot_h, y_pixels):
                 for _x in range(plot_w):
-                    image.putpixel((plot_x + _x, plot_y + _y),\
-                        color_grid if (_y_line or (_x % x_pixels) == 0) else color_bg)
+                    image.putpixel((plot_x + _x, plot_y + _y), color_grid)
             # Plot data
             print("Plotting data")
             _i = 0
@@ -355,6 +370,38 @@ class Cmd(cli.CLICommand):
                 # Update previous
                 _prev_x = _curr_x
                 _prev_y = _curr_y
+            # Draw X-labels
+            print("Drawing X-labels")
+            for _i in range(len(x_labels)):
+                _label = x_labels[_i]
+                _offx = plot_x + x_pixels * _i * x_labels_inc
+                for _char_y in range(font.CHAR_HEIGHT):
+                    _offy = (plot_y + plot_h + 2 + len(_label) * font.CHAR_WIDTH) - 1
+                    for _char in _label:
+                        _pixels = font.getchar(ord(_char))
+                        _mask = 1 << (_char_y * font.CHAR_WIDTH)
+                        for _char_x in range(font.CHAR_WIDTH):
+                            if (_pixels & _mask) != 0:
+                                image.putpixel((_offx, _offy), color_text)
+                            _offy -= 1
+                            _mask <<= 1
+                    _offx += 1
+            # Draw Y-labels
+            print("Drawing Y-labels")
+            for _i in range(len(y_labels)):
+                _label = y_labels[_i]
+                _offy = (plot_y + plot_h - font.CHAR_HEIGHT) - x_pixels * _i * y_labels_inc
+                for _char_y in range(font.CHAR_HEIGHT):
+                    _offx = plot_x - 2 - len(_label) * font.CHAR_WIDTH
+                    for _char in _label:
+                        _pixels = font.getchar(ord(_char))
+                        _mask = 1 << (_char_y * font.CHAR_WIDTH)
+                        for _char_x in range(font.CHAR_WIDTH):
+                            if (_pixels & _mask) != 0:
+                                image.putpixel((_offx, _offy), color_text)
+                            _offx += 1
+                            _mask <<= 1
+                    _offy += 1
             # Save image
             print("Saving image")
             self.__save_image(image, self_output)

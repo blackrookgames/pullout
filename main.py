@@ -33,14 +33,6 @@ def parse_list(input:str):
         if len(__item) > 0: newlist.append(__item)
     return True, newlist
 
-def parse_date(input:str):
-    dformat = input.\
-        replace("YYYY", "{0:04}").\
-        replace("YY", "{1:02}").\
-        replace("MM", "{2:02}").\
-        replace("DD", "{3:02}")
-    return True, dformat
-
 #endregion
 
 class Cmd(cli.CLICommand):
@@ -131,7 +123,6 @@ class Cmd(cli.CLICommand):
     __date = cli.CLIOptionWArgDef(\
         name = "date",\
         desc = "Date format (ex: MM/DD/YY, DD/MM/YYYY, YY/MM/DD)",\
-        parse = parse_date,\
         default = "MM/DD/YYYY")
     __time12 = cli.CLIOptionFlagDef(\
         name = "time12",\
