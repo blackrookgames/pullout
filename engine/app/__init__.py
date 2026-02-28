@@ -18,21 +18,72 @@ _f_console = _boacon.BCConsolePane()
 
 _f_looping = False
 _f_objects:list[AppObject] = []
+_f_focused:None|AppObject = None
 
 #endregion
 
 #region helper methods
 
+def _m_focus_set(focused:None|AppObject):
+    global _f_focused
+    if _f_focused is focused: return
+    prev = _f_focused
+    _f_focused = focused
+    # Set states
+    if prev is not None: prev._set_focus(False)
+    if _f_focused is not None: _f_focused._set_focus(True)
+    # Call methods
+    if prev is not None: prev._focus_lost()
+    if _f_focused is not None: _f_focused._focus_gained()
+
+def _m_focus_update(exclude:None|AppObject):
+    """
+    Also accessed by AppObject
+    """
+    # Make sure we are running (just return if we're not)
+    global _f_running
+    if not _f_running: return
+    # Check if focus needs to be updated
+    global _f_focused
+    if not (_f_focused is None or _f_focused is exclude or (not _f_focused.focusable)):
+        return
+    # Find an object to focus on
+    global _f_objects
+    found = None
+    for _obj in _f_objects:
+        if _obj is exclude: continue
+        if not _obj.focusable: continue
+        found = _obj
+        break
+    # Update focus
+    _m_focus_set(found)
+
 async def _m_main():
-    global _f_console
     # Welcome
+    global _f_console
     _f_console.print("Written by Zachary Combs")
     # Loop
+    global _f_objects, _f_focused
     loop = asyncio.get_running_loop()
     time = loop.time()
     while _f_looping:
         # Get keyboard input
         _key = _boacon.getch()
+        if _key == 0x09:
+            # Update focus
+            if _f_focused is None:
+                _m_focus_update(None)
+            else:
+                # Find index of object that's currently in focus
+                _start = _f_objects.index(_f_focused)
+                # Find next object
+                _found = None
+                for _i in range(len(_f_objects)):
+                    _obj = _f_objects[(_start + 1 + _i) % len(_f_objects)]
+                    if not _obj.focusable: continue
+                    _found = _obj
+                    break
+                _m_focus_set(_found)
         # Update time
         _time = time
         time = loop.time()
@@ -109,6 +160,8 @@ def run(params:AppStart):
         # Add objects
         _f_objects = [_obj for _obj in params.objects]
         for _obj in _f_objects: _obj._set_active(True)
+        # Set focus
+        _m_focus_update(None)
         # Run async
         asyncio.run(_m_main())
         # Success!!!
@@ -152,8 +205,12 @@ def object_add(obj:AppObject):
     _m_raise_if_notrunning()
     if obj.active: return
     global _f_objects
+    # Add object
     _f_objects.append(obj)
+    # Set object as active
     obj._set_active(True)
+    # Update focus
+    _m_focus_update(None)
 
 def object_remove(obj:AppObject):
     """
@@ -167,8 +224,13 @@ def object_remove(obj:AppObject):
     """
     _m_raise_if_notrunning()
     if not obj.active: return
-    global _f_objects
+    global _f_objects, _f_focused
+    # Update focus
+    if obj is _f_focused:
+        _m_focus_update(_f_focused)
+    # Remove object
     _f_objects.remove(obj)
+    # Set object as inactive
     obj._set_active(False)
 
 #endregion

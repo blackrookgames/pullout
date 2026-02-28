@@ -46,6 +46,7 @@ class StatusTable(_app.AppPaneObject):
             Date/time format
         """
         super().__init__()
+        self.focusable = True
         # List view
         self.__lv_show = False
         self.__lv_index = -1
@@ -262,17 +263,18 @@ class StatusTable(_app.AppPaneObject):
         super()._update(params)
         # Get keyboard input
         update_lv_timer = True
-        match params.key:
-            case _curses.KEY_UP:
-                self.__lv_update(\
-                    None if _reset_timer()\
-                    else max(0, self.__lv_index - 1))
-                update_lv_timer = False
-            case _curses.KEY_DOWN:
-                self.__lv_update(\
-                    None if _reset_timer()\
-                    else (self.__lv_index + 1))
-                update_lv_timer = False
+        if self.hasfocus:
+            match params.key:
+                case _curses.KEY_UP:
+                    self.__lv_update(\
+                        None if _reset_timer()\
+                        else max(0, self.__lv_index - 1))
+                    update_lv_timer = False
+                case _curses.KEY_DOWN:
+                    self.__lv_update(\
+                        None if _reset_timer()\
+                        else (self.__lv_index + 1))
+                    update_lv_timer = False
         # Update timer
         if update_lv_timer:
             if self.__lv_timer > 0.0:

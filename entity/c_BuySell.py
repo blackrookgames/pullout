@@ -43,6 +43,7 @@ class BuySell(_app.AppPaneObject):
             Crypto status table
         """
         super().__init__()
+        self.focusable = True
         # Crypto operation handler
         self.__crypto = crypto
         self.__opparams = opparams

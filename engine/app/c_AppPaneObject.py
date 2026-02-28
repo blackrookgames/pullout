@@ -8,6 +8,7 @@ from typing import\
     Callable as _Callable
 
 from engine.boacon import\
+    attr_create as _attr_create,\
     BCChar as _BCChar,\
     BCPane as _BCPane,\
     BCPostDrawArgs as _BCPostDrawArgs,\
@@ -68,13 +69,14 @@ class AppPaneObject(_AppObject, _BCPane):
     #region receivers
 
     def __r_postdraw(self, args:_BCPostDrawArgs):
+        cattr = args.cursesattr(_attr_create(6 if self.hasfocus else 7))
         def _draw_chr(_x:int, _y:int, _chr:str):
-            nonlocal args
-            try: args.win.addch(_y, _x, _chr)
+            nonlocal args, cattr
+            try: args.win.addch(_y, _x, _chr, cattr)
             except: pass
         def _draw_chrs(_x:int, _y:int, _chr:str, _len:int):
-            nonlocal args
-            try: args.win.addstr(_y, _x, _chr * _len)
+            nonlocal args, cattr
+            try: args.win.addstr(_y, _x, _chr * _len, cattr)
             except: pass
         # Draw border (if specified)
         if self.__border and self.x.cliplen >= 0 and self.y.cliplen >= 0:

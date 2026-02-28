@@ -194,10 +194,6 @@ class Cmd(cli.CLICommand):
     def __r_boacon_on_init(self):
         # Connect signals
         boacon.postdraw().connect(self.__r_boacon_post_draw)
-        # Set nav controls for settings view
-        assert self.__obj_settingsview is not None        
-        self.__obj_settingsview.nav_up = curses.KEY_LEFT    
-        self.__obj_settingsview.nav_down = curses.KEY_RIGHT
 
     def __r_boacon_on_final(self):
         # Disconnect signals
