@@ -2,17 +2,28 @@ all = ['AppPaneObject']
 
 import numpy as _np
 
+from curses import\
+    window as _window
 from typing import\
     Callable as _Callable
 
 from engine.boacon import\
     BCChar as _BCChar,\
     BCPane as _BCPane,\
-    panes as _panes
+    BCPostDrawArgs as _BCPostDrawArgs,\
+    panes as _panes,\
+    postdraw as _postdraw
 from .c_AppObject import\
     AppObject as _AppObject
 from .c_AppPaneObjectCharBuffer import\
     AppPaneObjectCharBuffer as _AppPaneObjectCharBuffer
+
+_CHAR_H = chr(0x2501)
+_CHAR_V = chr(0x2503)
+_CHAR_TL = chr(0x250F)
+_CHAR_TR = chr(0x2513)
+_CHAR_BL = chr(0x2517)
+_CHAR_BR = chr(0x251B)
 
 class AppPaneObject(_AppObject, _BCPane):
     """
@@ -28,6 +39,7 @@ class AppPaneObject(_AppObject, _BCPane):
         _AppObject.__init__(self)
         _BCPane.__init__(self)
         self.__chars = _AppPaneObjectCharBuffer()
+        self.__border = True
 
     #endregion
 
@@ -36,6 +48,67 @@ class AppPaneObject(_AppObject, _BCPane):
     @property
     def _chars(self): return self.__chars
 
+    #endregion
+
+    #region properties
+    
+    @property
+    def border(self):
+        """
+        Whether or not the pane has a border
+        """
+        return self.__border
+    @border.setter
+    def border(self, value:bool):
+        if self.__border == value: return
+        self.__border = value
+    
+    #endregion
+
+    #region receivers
+
+    def __r_postdraw(self, args:_BCPostDrawArgs):
+        def _draw_chr(_x:int, _y:int, _chr:str):
+            nonlocal args
+            try: args.win.addch(_y, _x, _chr)
+            except: pass
+        def _draw_chrs(_x:int, _y:int, _chr:str, _len:int):
+            nonlocal args
+            try: args.win.addstr(_y, _x, _chr * _len)
+            except: pass
+        # Draw border (if specified)
+        if self.__border and self.x.cliplen >= 0 and self.y.cliplen >= 0:
+            _win_h, _win_w = args.win.getmaxyx()
+            _draw_left = self.x.clip0 > 0
+            _draw_right = self.x.clip1 < _win_w
+            _draw_top = self.y.clip0 > 0
+            _draw_bottom = self.y.clip1 < _win_h
+            # Draw top
+            if _draw_top:
+                if _draw_left:
+                    _draw_chr(self.x.clip0 - 1, self.y.clip0 - 1, _CHAR_TL)
+                if _draw_right:
+                    _draw_chr(self.x.clip1, self.y.clip0 - 1, _CHAR_TR)
+                _draw_chrs(self.x.clip0, self.y.clip0 - 1, _CHAR_H, self.x.cliplen)
+            # Draw bottom
+            if _draw_bottom:
+                if _draw_left:
+                    _draw_chr(self.x.clip0 - 1, self.y.clip1, _CHAR_BL)
+                if _draw_right:
+                    _draw_chr(self.x.clip1, self.y.clip1, _CHAR_BR)
+                _draw_chrs(self.x.clip0, self.y.clip1, _CHAR_H, self.x.cliplen)
+            # Draw left
+            if _draw_left:
+                for _i in range(self.y.cliplen):
+                    _draw_chr(self.x.clip0 - 1, self.y.clip0 + _i, _CHAR_V)
+            # Draw right
+            if _draw_right:
+                for _i in range(self.y.cliplen):
+                    _draw_chr(self.x.clip1, self.y.clip0 + _i, _CHAR_V)
+            
+        # Call additional
+        self._postdraw()
+    
     #endregion
 
     #region helper methods
@@ -47,6 +120,12 @@ class AppPaneObject(_AppObject, _BCPane):
         - _chrs_w > 0
         - _chrs_h > 0
         - len(_chrs) == (_chrs_w * _chrs_h)
+        """
+        pass
+    
+    def _postdraw(self):
+        """
+        Called during the post draw period of boacon
         """
         pass
 
@@ -64,10 +143,15 @@ class AppPaneObject(_AppObject, _BCPane):
 
     def _activated(self):
         super()._activated()
+        # Add to panes
         _panes().append(self)
+        _postdraw().connect(self.__r_postdraw)
+        
 
     def _deactivated(self):
         super()._deactivated()
+        # Remove from panes
+        _postdraw().disconnect(self.__r_postdraw)
         _panes().remove(self)
 
     #endregion

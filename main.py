@@ -203,14 +203,14 @@ class Cmd(cli.CLICommand):
         # Disconnect signals
         boacon.postdraw().disconnect(self.__r_boacon_post_draw)
 
-    def __r_boacon_post_draw(self, win:curses.window):
+    def __r_boacon_post_draw(self, args:boacon.BCPostDrawArgs):
         assert self.__datetime is not None
         # Create string representation
         dtstr = self.__datetime.create(datetime.now())
         # Print
         try:
-            h, w = win.getmaxyx()
-            win.addstr(\
+            h, w = args.win.getmaxyx()
+            args.win.addstr(\
                 h - self.__vis_bottom - 1,\
                 w - self.__vis_right - len(dtstr),\
                 dtstr)
@@ -437,14 +437,14 @@ class Cmd(cli.CLICommand):
             self.__obj_table.x.dis0 = panes_left
             self.__obj_table.x.len = D_STATUS
             self.__obj_table.y.dis0 = panes_top
-            self.__obj_table.y.dis1 = panes_bottom + D_CONSOLE + 1
+            self.__obj_table.y.dis1 = panes_bottom + D_CONSOLE + 2
             params.objects.append(self.__obj_table)
             # Create buy/sell handler
             self.__obj_buysell = entity.BuySell(crypto, crypto_opparams, self.__obj_keeper, self.__obj_table)
-            self.__obj_buysell.x.dis0 = panes_left + D_STATUS + 1
+            self.__obj_buysell.x.dis0 = panes_left + D_STATUS + 2
             self.__obj_buysell.x.len = D_BUYSELL
             self.__obj_buysell.y.dis0 = panes_top
-            self.__obj_buysell.y.dis1 = panes_bottom + D_CONSOLE + 1
+            self.__obj_buysell.y.dis1 = panes_bottom + D_CONSOLE + 2
             params.objects.append(self.__obj_buysell)
             # Create settings view
             _settingsview_rows = [\
@@ -458,10 +458,10 @@ class Cmd(cli.CLICommand):
                 [ " Log Entry Max", f"{('\u221E' if (self_log_entries <= 0) else f"{self_log_entries} per-file")}" ],\
                 [ " Log File Max", f"{('\u221E' if (self_log_files <= 0) else f"{self_log_files} file(s)")}" ],]
             self.__obj_settingsview = entity.StaticTableView([ 20, 100 ], rows = _settingsview_rows)
-            self.__obj_settingsview.x.dis0 = panes_left + D_STATUS + 1 + D_BUYSELL + 1
+            self.__obj_settingsview.x.dis0 = panes_left + D_STATUS + 2 + D_BUYSELL + 2
             self.__obj_settingsview.x.dis1 = panes_right
             self.__obj_settingsview.y.dis0 = panes_top
-            self.__obj_settingsview.y.dis1 = panes_bottom + D_CONSOLE + 1
+            self.__obj_settingsview.y.dis1 = panes_bottom + D_CONSOLE + 2
             params.objects.append(self.__obj_settingsview)
             # Create keyboard control display
             self.__obj_keycontrols = entity.KeyControls()
@@ -471,10 +471,10 @@ class Cmd(cli.CLICommand):
             self.__obj_keycontrols.y.dis1 = panes_bottom
             params.objects.append(self.__obj_keycontrols)
             # Setup console pane
-            params.con_left = panes_left
-            params.con_right = panes_right + D_KEYCONTROLS + 1
+            params.con_left = self.__vis_left
+            params.con_right = panes_right + D_KEYCONTROLS + 2
             params.con_top = None
-            params.con_bottom = panes_bottom
+            params.con_bottom = self.__vis_bottom
             params.con_height = D_CONSOLE
             # Run main app code
             print("Launching app")

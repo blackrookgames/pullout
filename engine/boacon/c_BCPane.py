@@ -1,14 +1,9 @@
 all = ['BCPane']
 
-import numpy as _np
-
-from typing import\
-    Callable as _Callable
-
-from .c_BCChar import\
-    BCChar as _BCChar
 from .c_BCCoord import\
     BCCoord as _BCCoord
+from .c_BCSetChrFunc import\
+    BCSetChrFunc as _BCSetChrFunc
 
 class BCPane:
     """
@@ -62,7 +57,7 @@ class BCPane:
         self.__dirty = True
         return True
 
-    def _m_refresh(self, force:bool, setchr:_Callable[[int, int, _BCChar], None]):
+    def _m_refresh(self, force:bool, setchr:_BCSetChrFunc):
         """
         Also accessed by functions
         """
@@ -76,12 +71,12 @@ class BCPane:
         """
         pass
     
-    def _draw(self, setchr:_Callable[[int, int, _BCChar], None]):
+    def _draw(self, setchr:_BCSetChrFunc):
         """
         Draws the pane
 
         :param setchr:
-            Function for putting characters on the screen; parameters are x, y, and char
+            Function for putting characters on the screen
         """
         pass
 

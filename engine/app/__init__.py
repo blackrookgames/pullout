@@ -24,6 +24,10 @@ _f_objects:list[AppObject] = []
 #region helper methods
 
 async def _m_main():
+    global _f_console
+    # Welcome
+    _f_console.print("Written by Zachary Combs")
+    # Loop
     loop = asyncio.get_running_loop()
     time = loop.time()
     while _f_looping:
@@ -94,6 +98,7 @@ def run(params:AppStart):
         _asynccr._m_init()
         # Initialize boacon
         _boacon.init()
+        _boacon.set_border(False)
         _boacon.panes().append(_f_console)
         _f_console.x.dis0 = params.con_left
         _f_console.x.dis1 = params.con_right

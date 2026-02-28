@@ -2,6 +2,8 @@ from .c_BCChar import *
 from .c_BCCoord import *
 from .c_BCError import *
 from .c_BCPane import *
+from .c_BCPostDrawArgs import *
+from .c_BCSetChrFunc import *
 from .c_BCSignal import *
 from .c_BCSignalEmitter import *
 from .c_BCState import *
@@ -54,8 +56,8 @@ _s_on_init = BCSignal(_s_on_init_emitter)
 _s_on_final_emitter = BCSignalEmitter[()]()
 _s_on_final = BCSignal(_s_on_final_emitter)
 
-_s_postdraw_emitter:None|BCSignalEmitter[_curses.window] = None
-_s_postdraw:None|BCSignal[_curses.window] = None
+_s_postdraw_emitter:None|BCSignalEmitter[BCPostDrawArgs] = None
+_s_postdraw:None|BCSignal[BCPostDrawArgs] = None
 
 #endregion
 
@@ -78,12 +80,18 @@ def _m_setcursor(visible:bool):
         try: _f_win.leaveok(not visible)
         except _curses.error: pass
 
+def _m_cursesattr_color(attr:int):
+    cattr = _curses.A_STANDOUT if attr_emp(attr) else _curses.A_NORMAL
+    return cattr | _curses.color_pair(0b111 ^ attr_color(attr))
+
+def _m_cursesattr_nocolor(attr:int):
+    return _curses.A_STANDOUT if attr_emp(attr) else _curses.A_NORMAL
+
 def _m_setchr_color(x:int, y:int, char:BCChar):
     global _f_win, _f_bgbuffer, _f_win_w
     assert _f_win is not None
     assert _f_bgbuffer is not None
-    attr = _curses.A_STANDOUT if attr_emp(char.attr) else _curses.A_NORMAL
-    attr |= _curses.color_pair(0b111 ^ attr_color(char.attr))
+    attr = _m_cursesattr_color(char.attr)
     try:
         _f_win.addch(y, x, chr(char.ord), attr)
         _f_bgbuffer[y * _f_win_w + x] = True
@@ -93,7 +101,7 @@ def _m_setchr_nocolor(x:int, y:int, char:BCChar):
     global _f_win, _f_bgbuffer, _f_win_w
     assert _f_win is not None
     assert _f_bgbuffer is not None
-    attr = _curses.A_STANDOUT if attr_emp(char.attr) else _curses.A_NORMAL
+    attr = _m_cursesattr_nocolor(char.attr)
     try:
         _f_win.addch(y, x, chr(char.ord), attr)
         _f_bgbuffer[y * _f_win_w + x] = True
@@ -182,8 +190,8 @@ def init():
     _f_border = True
     # Initialize signals
     global _s_postdraw, _s_postdraw_emitter
-    _s_postdraw_emitter = BCSignalEmitter[_curses.window]()
-    _s_postdraw = BCSignal[_curses.window](_s_postdraw_emitter)
+    _s_postdraw_emitter = BCSignalEmitter[BCPostDrawArgs]()
+    _s_postdraw = BCSignal[BCPostDrawArgs](_s_postdraw_emitter)
     # Success!!!
     _f_state = BCState.RUN
     _s_on_init_emitter.emit(())
@@ -274,6 +282,9 @@ def refresh():
     assert _f_panes is not None
     global _s_postdraw_emitter
     assert _s_postdraw_emitter is not None
+    # Determine functions
+    _func_cursesattr = _m_cursesattr_color if _f_color else _m_cursesattr_nocolor
+    _func_setchr = _m_setchr_color if _f_color else _m_setchr_nocolor
     # Update size
     _new_h, _new_w = _f_win.getmaxyx()
     if _f_win_w != _new_w or _f_win_h != _new_h:
@@ -292,9 +303,8 @@ def refresh():
     if redrawbg:
         _f_bgbuffer.fill(False)
     # Update panes
-    _setchr = _m_setchr_color if _f_color else _m_setchr_nocolor
     for _pane in _f_panes:
-        _pane._m_refresh(redrawbg, _setchr)
+        _pane._m_refresh(redrawbg, _func_setchr)
     # Draw background
     if redrawbg:
         for _y in range(_f_win_h):
@@ -307,7 +317,7 @@ def refresh():
                 try: _f_win.addch(_y, _x, _chr)
                 except: pass
     # Post draw
-    _s_postdraw_emitter.emit((_f_win,))
+    _s_postdraw_emitter.emit((BCPostDrawArgs(_f_win, _func_cursesattr, _func_setchr),))
     # Success!!!
     _f_win.refresh()
     
