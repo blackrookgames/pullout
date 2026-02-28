@@ -3,6 +3,9 @@ from .c_CryptoKeeper import *
 from .c_CryptoKeeperList import *
 from .c_CryptoKeeperListAccess import *
 from .c_CryptoKeeperListItem import *
+from .c_History import *
+from .c_HistoryData import *
+from .c_HistoryDataEntry import *
 from .c_KeyControls import *
 from .c_MiscOps import *
 from .c_StaticTableView import *

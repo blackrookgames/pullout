@@ -63,6 +63,7 @@ class Cmd(cli.CLICommand):
         self.__obj_keeper:None|entity.CryptoKeeper = None
         self.__obj_table:None|entity.StatusTable = None
         self.__obj_buysell:None|entity.BuySell = None
+        self.__obj_history:None|entity.History = None
         self.__obj_settingsview:None|entity.StaticTableView = None
         self.__obj_keycontrols:None|entity.KeyControls = None
         # Logging
@@ -339,6 +340,7 @@ class Cmd(cli.CLICommand):
         D_CONSOLE = 10
         D_STATUS = 50
         D_BUYSELL = 30
+        D_SETTINGS = 40
         D_KEYCONTROLS = 20
         try:
             self_currency = cast(str, self.currency) # type: ignore
@@ -442,6 +444,13 @@ class Cmd(cli.CLICommand):
             self.__obj_buysell.y.dis0 = panes_top
             self.__obj_buysell.y.dis1 = panes_bottom + D_CONSOLE + 2
             params.objects.append(self.__obj_buysell)
+            # Create history view
+            self.__obj_history = entity.History(self.__obj_keeper, self.__obj_table, self.__datetime)
+            self.__obj_history.x.dis0 = panes_left + D_STATUS + 2 + D_BUYSELL + 2
+            self.__obj_history.x.dis1 = panes_right
+            self.__obj_history.y.dis0 = panes_top
+            self.__obj_history.y.dis1 = panes_bottom + D_CONSOLE + 2
+            params.objects.append(self.__obj_history)
             # Create settings view
             _settingsview_rows = [\
                 [ " Interval", f"{self_interval} sec" ],\
@@ -454,10 +463,10 @@ class Cmd(cli.CLICommand):
                 [ " Log Entry Max", f"{('\u221E' if (self_log_entries <= 0) else f"{self_log_entries} per-file")}" ],\
                 [ " Log File Max", f"{('\u221E' if (self_log_files <= 0) else f"{self_log_files} file(s)")}" ],]
             self.__obj_settingsview = entity.StaticTableView([ 20, 100 ], rows = _settingsview_rows)
-            self.__obj_settingsview.x.dis0 = panes_left + D_STATUS + 2 + D_BUYSELL + 2
-            self.__obj_settingsview.x.dis1 = panes_right
-            self.__obj_settingsview.y.dis0 = panes_top
-            self.__obj_settingsview.y.dis1 = panes_bottom + D_CONSOLE + 2
+            self.__obj_settingsview.x.len = D_SETTINGS
+            self.__obj_settingsview.x.dis1 = panes_right + D_KEYCONTROLS + 2
+            self.__obj_settingsview.y.len = D_CONSOLE
+            self.__obj_settingsview.y.dis1 = panes_bottom
             params.objects.append(self.__obj_settingsview)
             # Create keyboard control display
             self.__obj_keycontrols = entity.KeyControls()
@@ -468,7 +477,7 @@ class Cmd(cli.CLICommand):
             params.objects.append(self.__obj_keycontrols)
             # Setup console pane
             params.con_left = self.__vis_left
-            params.con_right = panes_right + D_KEYCONTROLS + 2
+            params.con_right = panes_right + D_KEYCONTROLS + 2 + D_SETTINGS + 2
             params.con_top = None
             params.con_bottom = self.__vis_bottom
             params.con_height = D_CONSOLE
