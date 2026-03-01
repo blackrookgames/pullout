@@ -68,7 +68,7 @@ class History(_app.AppPaneObject):
         # Add entries (if needed)
         if len(self.__entries) == 0:
             for _crypto in self.__keeper.prices:
-                self.__entries[_crypto.name] = _HistoryData(self.__keeper, _crypto.name, 20)
+                self.__entries[_crypto.name] = _HistoryData(self.__keeper, _crypto.name, 100)
         # Update entries
         for _crypto in self.__keeper.prices:
             self.__entries[_crypto.name]._refresh()
