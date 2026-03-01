@@ -15,8 +15,9 @@ class HistoryData:
     #region init
 
     def __init__(self,\
-            keeper:_CryptoKeeper,
-            crypto:str):
+            keeper:_CryptoKeeper,\
+            crypto:str,\
+            maxentries:int):
         """
         Initializer for HistoryData
 
@@ -24,12 +25,16 @@ class HistoryData:
             Crypto keeper
         :params crypto:
             Crypto name
+        :params maxentries:
+            Maximum number of entries
         """
         super().__init__()
         # Crypto keeper
         self.__keeper = keeper
         # Crypto name
         self.__crypto = crypto
+        # Max entries
+        self.__maxentries = max(1, maxentries)
         # History
         self.__entries_list:list[_HistoryDataEntry] = []
         self.__entries:_helper.LockedList[_HistoryDataEntry] = _helper.LockedList[_HistoryDataEntry](self.__entries_list)
@@ -48,7 +53,7 @@ class HistoryData:
     @property
     def history(self):
         """
-        History entries
+        History entries (newest to oldest)
         """
         return self.__entries
 
@@ -60,7 +65,6 @@ class HistoryData:
         """
         Also accessed by History
         """
-        _MAXENTRIES = 100
         # Make sure crypto can be found
         if not (self.__crypto in self.__keeper.prices): return
         # Create entry
@@ -68,8 +72,8 @@ class HistoryData:
             self.__keeper.refreshed_when,\
             self.__keeper.prices[self.__crypto].value)
         # Add entry
-        if len(self.__entries_list) >= _MAXENTRIES:
-            self.__entries_list.pop(0)
-        self.__entries_list.append(entry)
+        if len(self.__entries_list) >= self.__maxentries:
+            self.__entries_list.pop()
+        self.__entries_list.insert(0, entry)
 
     #endregion

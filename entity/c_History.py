@@ -18,6 +18,10 @@ from .c_CryptoKeeper import\
 from .c_StatusTable import\
     StatusTable as _StatusTable
 
+_SPACE = _boacon.BCChar(0x20)
+_ARROW_UP = _boacon.BCChar(0x2191)
+_ARROW_DOWN = _boacon.BCChar(0x2193)
+
 class History(_app.AppPaneObject):
     """
     Represents a display of price history
@@ -53,6 +57,8 @@ class History(_app.AppPaneObject):
         self.__entries:dict[str, _HistoryData] = {}
         # Active crypto (one being displayed)
         self.__active:None|str = None
+        # View
+        self.__view_offset = 0 # Offset progresses upward
 
     #endregion
 
@@ -62,7 +68,7 @@ class History(_app.AppPaneObject):
         # Add entries (if needed)
         if len(self.__entries) == 0:
             for _crypto in self.__keeper.prices:
-                self.__entries[_crypto.name] = _HistoryData(self.__keeper, _crypto.name)
+                self.__entries[_crypto.name] = _HistoryData(self.__keeper, _crypto.name, 20)
         # Update entries
         for _crypto in self.__keeper.prices:
             self.__entries[_crypto.name]._refresh()
@@ -78,6 +84,8 @@ class History(_app.AppPaneObject):
         if self.__table.selcrypto is None: return
         # Change active crypto
         self.__active = self.__table.selcrypto
+        # Reset view
+        self.__view_offset = 0
         # Update character buffer
         self._update_chrs()
 
@@ -87,61 +95,58 @@ class History(_app.AppPaneObject):
     
     def _refreshbuffer(self):
         super()._refreshbuffer()
-        _SPACE = _boacon.BCChar(0x20)
-        oindex = 0
-        # Test: placeholder
-        _rest = self._chars.width
-        _text = "History placeholder"
-        for _i in range(min(_rest, len(_text))):
-            self._chars[oindex] =  _boacon.BCChar(ord(_text[_i]))
-            oindex += 1
-            _rest -= 1
-        while _rest > 0:
-            self._chars[oindex] = _SPACE
-            _rest -= 1
-            oindex += 1
-        # Test: spacing
-        for _i in range(self._chars.width):
-            self._chars[oindex] = _SPACE
-            oindex += 1
-        # Show active crypto
-        if self.__active is not None:
-            _entry = self.__entries[self.__active]
-            _rest = self._chars.width
-            # Test: name
-            for _i in range(min(len(_entry.crypto), _rest)):
-                self._chars[oindex] = _boacon.BCChar(ord(_entry.crypto[_i]))
-                oindex += 1
+        def _draw_column(_start, _end, _colwidth, _str):
+            nonlocal self
+            # Draw string
+            _rest = min(_end - _start, _colwidth)
+            for _i in range(min(_rest, len(_str))):
+                self._chars[_start] = _boacon.BCChar(ord(_str[_i]))
+                _start += 1
                 _rest -= 1
-            # Test: space
-            for _i in range(min(3, _rest)):
-                self._chars[oindex] = _SPACE
-                oindex += 1
+            # Fill rest of column
+            while  _rest > 0:
+                self._chars[_start] = _SPACE
+                _start += 1
                 _rest -= 1
-            # Test: date and price
-            if len(_entry.history) > 0:
-                _last = _entry.history[len(_entry.history) - 1]
-                # Test: date/time
-                _dt = self.__dtformat.create(_last.dt)
-                for _i in range(min(len(_dt), _rest)):
-                    self._chars[oindex] = _boacon.BCChar(ord(_dt[_i]))
-                    oindex += 1
-                    _rest -= 1
-                # Test: space
-                for _i in range(min(3, _rest)):
+            # Success!!!
+            return _start
+        if len(self._chars) > 0 and self.__active is not None:
+            active = self.__entries[self.__active]
+            if len(active.history) > 0:
+                oindex = len(self._chars)
+                # Fix view
+                if (self.__view_offset + self._chars.height) > len(active.history):
+                    self.__view_offset = len(active.history) - self._chars.height
+                if self.__view_offset < 0:
+                    self.__view_offset = 0
+                # Draw history
+                _view_offset_end = self.__view_offset + self._chars.height
+                _view_at_start = self.__view_offset == 0
+                _view_at_end = _view_offset_end >= len(active.history)
+                for _i in range(self.__view_offset, len(active.history) if _view_at_end else _view_offset_end):
+                    _xend = oindex
+                    _marg = _xend - 2
+                    oindex -= self._chars.width
+                    _j = oindex
+                    # Get history entry
+                    _hentry = active.history[_i]
+                    # Draw date
+                    _j = _draw_column(_j, _marg, 30, f" {self.__dtformat.create(_hentry.dt)}")
+                    # Draw price
+                    _j = _draw_column(_j, _marg, 20, str(_hentry.price))
+                    # Fill row
+                    while _j < _xend:
+                        self._chars[_j] = _SPACE
+                        _j += 1
+                # Fill rest
+                while oindex > 0:
+                    oindex -= 1
                     self._chars[oindex] = _SPACE
-                    oindex += 1
-                    _rest -= 1
-                # Test: date/time
-                _price = str(_last.price)
-                for _i in range(min(len(_price), _rest)):
-                    self._chars[oindex] = _boacon.BCChar(ord(_price[_i]))
-                    oindex += 1
-                    _rest -= 1
-        # Fill rest
-        if oindex < len(self._chars):
-            self._chars[oindex] = _SPACE
-            oindex += 1
+                # Add view arrows
+                if not _view_at_start: self._chars[len(self._chars) - 1] = _ARROW_DOWN
+                if not _view_at_end: self._chars[self._chars.width - 1] = _ARROW_UP
+            else: self._chars.clear()
+        else: self._chars.clear()
 
     #endregion
 
@@ -149,6 +154,15 @@ class History(_app.AppPaneObject):
 
     def _update(self, params:_app.AppUpdate):
         super()._update(params)
+        # Check keys
+        if self.hasfocus:
+            match params.key:
+                case _curses.KEY_UP:
+                    self.__view_offset += 1
+                    self._update_chrs()
+                case _curses.KEY_DOWN:
+                    self.__view_offset -= 1
+                    self._update_chrs()
 
     def _activated(self):
         super()._activated()

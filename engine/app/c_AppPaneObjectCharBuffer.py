@@ -85,3 +85,16 @@ class AppPaneObjectCharBuffer:
             _SPACE, dtype = object)
 
     #endregion
+
+    #region methods
+
+    def clear(self, char:_BCChar = _SPACE):
+        """
+        Clears the character buffer
+
+        :param char:
+            Clear character
+        """
+        self.__chars.fill(_SPACE)
+
+    #endregion
