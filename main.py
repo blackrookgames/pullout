@@ -119,7 +119,13 @@ class Cmd(cli.CLICommand):
         name = "interval",\
         desc = "Length of update intervals",\
         parse = cli.CLIParseUtil.to_float,\
-        default = 1.0)
+        default = 5.0)
+    __trlen = cli.CLIOptionWArgDef(\
+        name = "trlen",\
+        desc = "Before a decision to buy/sell is made, the program looks back a certain length of time " +\
+            "to examine the change in price. trlen is that length of time.",\
+        parse = cli.CLIParseUtil.to_float,\
+        default = 30.0)
     
     __date = cli.CLIOptionWArgDef(\
         name = "date",\
@@ -346,6 +352,7 @@ class Cmd(cli.CLICommand):
             self_currency = cast(str, self.currency) # type: ignore
             self_sellall = cast(bool, self.sellall) # type: ignore
             self_interval = cast(float, self.interval) # type: ignore
+            self_trlen = cast(float, self.trlen) # type: ignore
             self_date = cast(str, self.date) # type: ignore
             self_time12 = cast(bool, self.time12) # type: ignore
             self_ddos_delay = cast(float, self.ddos_delay) # type: ignore
@@ -454,6 +461,7 @@ class Cmd(cli.CLICommand):
             # Create settings view
             _settingsview_rows = [\
                 [ " Interval", f"{self_interval} sec" ],\
+                [ " Tr Len", f"{self_trlen} sec" ],\
                 [ " Date Format", self_date ],\
                 [ " 12 Hours", self_time12 ],\
                 [ " DDOS Delay", f"{self_ddos_delay} sec" ],\
