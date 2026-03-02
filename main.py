@@ -62,7 +62,7 @@ class Cmd(cli.CLICommand):
         self.__obj_miscops:None|entity.MiscOps = None
         self.__obj_keeper:None|entity.CryptoKeeper = None
         self.__obj_table:None|entity.StatusTable = None
-        self.__obj_buysell:None|entity.BuySell = None
+        self.__obj_buysell:None|entity.BuSe = None
         self.__obj_history:None|entity.History = None
         self.__obj_settingsview:None|entity.StaticTableView = None
         self.__obj_keycontrols:None|entity.KeyControls = None
@@ -445,7 +445,11 @@ class Cmd(cli.CLICommand):
             self.__obj_table.y.dis1 = panes_bottom + D_CONSOLE + 2
             params.objects.append(self.__obj_table)
             # Create buy/sell handler
-            self.__obj_buysell = entity.BuySell(crypto, crypto_opparams, self.__obj_keeper, self.__obj_table)
+            self.__obj_buysell = entity.BuSe(\
+                crypto, crypto_opparams,\
+                self.__obj_keeper, self.__obj_table,\
+                round(self_trlen * 1000000),\
+                self.__datetime)
             self.__obj_buysell.x.dis0 = panes_left + D_STATUS + 2
             self.__obj_buysell.x.len = D_BUYSELL
             self.__obj_buysell.y.dis0 = panes_top
