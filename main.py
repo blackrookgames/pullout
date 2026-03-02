@@ -127,6 +127,17 @@ class Cmd(cli.CLICommand):
         parse = cli.CLIParseUtil.to_float,\
         default = 30.0)
     
+    __bsmax = cli.CLIOptionWArgDef(\
+        name = "bsmax",\
+        desc = "Crypto is brought when its price increase is greater than this percentage.",\
+        parse = cli.CLIParseUtil.to_float,\
+        default = 0.0)
+    __bsmin = cli.CLIOptionWArgDef(\
+        name = "bsmin",\
+        desc = "Crypto is sold when its price increase is less than this percentage.",\
+        parse = cli.CLIParseUtil.to_float,\
+        default = 0.0)
+
     __date = cli.CLIOptionWArgDef(\
         name = "date",\
         desc = "Date format (ex: MM/DD/YY, DD/MM/YYYY, YY/MM/DD)",\
@@ -353,6 +364,8 @@ class Cmd(cli.CLICommand):
             self_sellall = cast(bool, self.sellall) # type: ignore
             self_interval = cast(float, self.interval) # type: ignore
             self_trlen = cast(float, self.trlen) # type: ignore
+            self_bsmax = cast(float, self.bsmax) # type: ignore
+            self_bsmin = cast(float, self.bsmin) # type: ignore
             self_date = cast(str, self.date) # type: ignore
             self_time12 = cast(bool, self.time12) # type: ignore
             self_ddos_delay = cast(float, self.ddos_delay) # type: ignore
@@ -365,6 +378,13 @@ class Cmd(cli.CLICommand):
             self_off_bottom = cast(int, self.off_bottom) # type: ignore
             self_log_entries = cast(int, self.log_entries) # type: ignore
             self_log_files = cast(int, self.log_files) # type: ignore
+            # Compute bsmax and bsmin
+            if self_bsmax < self_bsmin:
+                bsmax = (self_bsmin + self_bsmax) / 2
+                bsmin = bsmax
+            else:
+                bsmax = self_bsmax
+                bsmin = self_bsmin
             # Update offsets
             self.__vis_left = max(0, self_off_left)
             self.__vis_right = max(0, self_off_right)
@@ -449,6 +469,7 @@ class Cmd(cli.CLICommand):
                 crypto, crypto_opparams,\
                 self.__obj_keeper, self.__obj_table,\
                 round(self_trlen * 1000000),\
+                bsmax / 100, bsmin / 100,\
                 self.__datetime)
             self.__obj_buysell.x.dis0 = panes_left + D_STATUS + 2
             self.__obj_buysell.x.len = D_BUYSELL
@@ -466,6 +487,8 @@ class Cmd(cli.CLICommand):
             _settingsview_rows = [\
                 [ " Interval", f"{self_interval} sec" ],\
                 [ " Tr Len", f"{self_trlen} sec" ],\
+                [ " BS Max", f"{bsmax}%" ],\
+                [ " BS Min", f"{bsmin}%" ],\
                 [ " Date Format", self_date ],\
                 [ " 12 Hours", self_time12 ],\
                 [ " DDOS Delay", f"{self_ddos_delay} sec" ],\

@@ -22,7 +22,9 @@ class BuSeData:
     def __init__(self,\
             keeper:_CryptoKeeper,\
             crypto:str,\
-            trlen:int):
+            trlen:int,\
+            balance:float,\
+            balration:float):
         """
         Initializer for BuSeData
 
@@ -32,6 +34,10 @@ class BuSeData:
             Crypto name
         :param trlen:
             Length of time (in microseconds) to look back before making a decision to buy or sell
+        :param balance:
+            Crypto balance
+        :param balration:
+            What portion of the non-crypto balance gets to be used to buy crypto
         """
         super().__init__()
         # Crypto keeper
@@ -40,9 +46,12 @@ class BuSeData:
         self.__crypto = crypto
         self.__curr_date = _datetime(1990, 1, 1)
         self.__curr_price = 0.0
-        self.__prev_date = _datetime(1990, 1, 1)
+        self.__prev_date:None|_datetime = None
         self.__prev_price:None|float = None
-        self.__balance = 0.0
+        self.__diff_price:None|float = None
+        self.__diff_fract:None|float = None
+        self.__balance = balance
+        self.__balration = balration
         # Train interval
         self.__trlen = max(1, trlen)
         # History
@@ -93,11 +102,32 @@ class BuSeData:
         return self.__prev_price
     
     @property
+    def diff_price(self):
+        """
+        Rough price difference
+        """
+        return self.__diff_price
+    
+    @property
+    def diff_fract(self):
+        """
+        Rough "fractional" difference
+        """
+        return self.__diff_fract
+    
+    @property
     def balance(self):
         """
-        Current balance
+        Crypto balance
         """
         return self.__balance
+    
+    @property
+    def balration(self):
+        """
+        What portion of the non-crypto balance gets to be used to buy crypto
+        """
+        return self.__balration
     
     @property
     def trlen(self):
@@ -117,8 +147,11 @@ class BuSeData:
 
     #region helper methods
 
-    def _refresh(self):
+    def _refresh(self, bsmax:float, bsmin:float):
         """
+        Assume
+        - bsmax >= bsmin
+        \n
         Also accessed by BuSe
         """
         # Make sure crypto can be found
@@ -148,9 +181,26 @@ class BuSeData:
                 self.__entries_delta.pop()
                 self.__entries_tdelta = _tdeltawo
         # Get previous price (do this after updating history entries)
-        self.__prev_date = _helper.DTUtil.from_micro2000(_curr_date - self.__trlen)
         self.__prev_price = self.__getprice(self.__trlen)
-        
+        if self.__prev_price is not None:
+            self.__prev_date = _helper.DTUtil.from_micro2000(_curr_date - self.__trlen)
+        # Compute price difference
+        if self.__prev_price is not None:
+            self.__diff_price = self.__curr_price - self.__prev_price
+            self.__diff_fract = self.__diff_price / self.__prev_price
+    
+    def _set_balance(self, value:float):
+        """
+        Also accessed by BuSe
+        """
+        self.__balance = value
+    
+    def _set_balration(self, value:float):
+        """
+        Also accessed by BuSe
+        """
+        self.__balration = value
+
     def __getprice(self, t:int):
         # Make sure there's sufficient data
         if self.__entries_tdelta <= t:

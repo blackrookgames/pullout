@@ -27,6 +27,8 @@ class BuSe(_app.AppPaneObject):
             keeper:_CryptoKeeper,\
             table:_StatusTable,\
             trlen:int,\
+            bsmax:float,\
+            bsmin:float,\
             dtformat:_helper.DTFormat):
         """
         Initializer for BuSe
@@ -41,6 +43,12 @@ class BuSe(_app.AppPaneObject):
             Crypto status table
         :param trlen:
             Length of time (in microseconds) to look back before making a decision to buy or sell
+        :param bsmax:
+            Maximum "fractional" difference before buying crypto
+        :param bsmin:
+            Minimum "fractional" difference before selling crypto
+        :param dtformat:
+            Date/time format
         """
         super().__init__()
         self.focusable = True
@@ -55,6 +63,9 @@ class BuSe(_app.AppPaneObject):
         self.__table.selection_changed.connect(self.__r_table_selection_changed)
         # Train interval
         self.__trlen = max(1, trlen)
+        # BS max/min
+        self.__bsmax = bsmax
+        self.__bsmin = bsmax if (bsmin > bsmax) else bsmin
         # Date/time format
         self.__dtformat = dtformat
         # Crypto entries
@@ -69,11 +80,25 @@ class BuSe(_app.AppPaneObject):
     def __r_keeper_refreshed(self):
         # Add entries (if needed)
         if len(self.__entries) == 0:
-            for _crypto in self.__keeper.prices:
-                self.__entries[_crypto.name] = _BuSeData(self.__keeper, _crypto.name, self.__trlen)
+            # Gather information about cryptos
+            nobalance = 0
+            for _c_balance in self.__keeper.balances:
+                # Does it have a balance?
+                if _c_balance.value == 0.0: nobalance += 1
+            # Compute balance ration
+            balration = 0.0 if (nobalance == 0) else (1.0 / nobalance)
+            # Create entries
+            for _c_price in self.__keeper.prices:
+                # Retrieve balance
+                _c_balance = self.__keeper.balances[_c_price.name]
+                _balration = 0.0 if (_c_balance.value != 0.0) else balration
+                # Create/add entry
+                self.__entries[_c_price.name] = _BuSeData(\
+                    self.__keeper, _c_price.name, self.__trlen,\
+                    _c_balance.value, _balration)
         # Update entries
-        for _crypto in self.__keeper.prices:
-            self.__entries[_crypto.name]._refresh()
+        for _c_price in self.__keeper.prices:
+            self.__entries[_c_price.name]._refresh(self.__bsmax, self.__bsmin)
         # If no crypto is active, find one to be active
         if self.__active is None:
             if len(self.__keeper.prices) > 0:
@@ -114,19 +139,44 @@ class BuSe(_app.AppPaneObject):
                 for _i in range(min(len(self._chars) - oindex, self._chars.width)):
                     self._chars[oindex] = _SPACE
                     oindex += 1
+            def _percent(_value:float):
+                _DECIMALS = 4
+                # Check if zero
+                if _value == 0.0: return "0.0%"
+                # Convert to percent
+                _value *= 100
+                _round = round(_value, _DECIMALS)
+                if _round != 0.0: return f"{_round}%"
+                # Use scientific notation
+                _power = 0
+                while abs(_round) < 1.0:
+                    _value *= 10
+                    _round = round(_value, _DECIMALS)
+                    _power -= 1
+                return f"{_round}(E{_power})%"
             # Name
             _print(f" {self.__active}")
             _print_space()
+            # Difference
+            _print(" -" if (active.diff_price is None) else f" {active.diff_price}")
+            _print(" -" if (active.diff_fract is None) else f" {_percent(active.diff_fract)}")
+            _print_space()
+            # Balance
+            if active.balance == 0.0:
+                _print(" Non-crypto ration:")
+                _print(f"   {_percent(active.balration)}")
+            else:
+                _print(" Balance:")
+                _print(f"   {active.balance}")
+            _print_space()
             # Current
-            _print_space()
             _print(" Current:")
-            _print(f" {self.__dtformat.create(active.curr_date)}")
-            _print(f" {active.curr_price}")
+            _print(f"   {self.__dtformat.create(active.curr_date)}")
+            _print(f"   {active.curr_price}")
             # Previous
-            _print_space()
             _print(" Previous:")
-            _print(" -" if (active.prev_price is None) else f" {self.__dtformat.create(active.prev_date)}")
-            _print(" -" if (active.prev_price is None) else f" {active.prev_price}")
+            _print("   -" if (active.prev_date is None) else f"   {self.__dtformat.create(active.prev_date)}")
+            _print("   -" if (active.prev_price is None) else f"   {active.prev_price}")
             # Fill rest
             if oindex < len(self._chars):
                 self._chars[oindex] = _SPACE

@@ -12,6 +12,8 @@ from .c_StaticTableViewRows import\
     StaticTableViewRows as _StaticTableViewRows
 
 _SPACE = _boacon.BCChar(0x20)
+_ARROW_UP = _boacon.BCChar(0x2191)
+_ARROW_DOWN = _boacon.BCChar(0x2193)
 
 class StaticTableView(_app.AppPaneObject):
     """
@@ -83,39 +85,52 @@ class StaticTableView(_app.AppPaneObject):
         super()._refreshbuffer()
         if self._chars.width != self.__prev_width or self._chars.height != self.__prev_height:
             self._view_update(dontupdatechrs = True)
+        _MARGIN = 2
         _oindex = 0
         # Draw rows
-        for _i in range(min(self._chars.height, len(self.__rows))):
-            _rest = self._chars.width
-            # Draw row content
-            _row = self.__rows[self.__view_offset + _i]
-            for _j in range(len(_row)):
-                # Make sure there's room
-                if _rest == 0: break
-                # Get cell and cell width
-                _cell = _row[_j]
-                _cellrest = min(_rest, self.__rows.columnwidths[_j])
-                # Draw cell content
-                for _k in range(min(_cellrest, len(_cell))):
-                    self._chars[_oindex] = _cell[_k]
-                    _oindex += 1
-                    _rest -= 1
-                    _cellrest -= 1
-                # Fill rest of cell with spaces
-                while _cellrest > 0:
+        if self._chars.width > _MARGIN:
+            for _i in range(min(self._chars.height, len(self.__rows))):
+                _rest = self._chars.width - _MARGIN
+                # Draw row content
+                _row = self.__rows[self.__view_offset + _i]
+                for _j in range(len(_row)):
+                    # Make sure there's room
+                    if _rest == 0: break
+                    # Get cell and cell width
+                    _cell = _row[_j]
+                    _cellrest = min(_rest, self.__rows.columnwidths[_j])
+                    # Draw cell content
+                    for _k in range(min(_cellrest, len(_cell))):
+                        self._chars[_oindex] = _cell[_k]
+                        _oindex += 1
+                        _rest -= 1
+                        _cellrest -= 1
+                    # Fill rest of cell with spaces
+                    while _cellrest > 0:
+                        self._chars[_oindex] = _SPACE
+                        _oindex += 1
+                        _rest -= 1
+                        _cellrest -= 1
+                # Fill rest of row with spaces
+                while _rest > 0:
                     self._chars[_oindex] = _SPACE
                     _oindex += 1
                     _rest -= 1
-                    _cellrest -= 1
-            # Fill rest of row with spaces
-            while _rest > 0:
-                self._chars[_oindex] = _SPACE
-                _oindex += 1
-                _rest -= 1
+                # Fill margin
+                for _j in range(_MARGIN):
+                    self._chars[_oindex] = _SPACE
+                    _oindex += 1
         # Fill rest
         while _oindex < len(self._chars):
             self._chars[_oindex] = _SPACE
             _oindex += 1
+        # Add view arrows
+        if len(self._chars) > 0:
+            if self.__view_offset > 0:
+                self._chars[self._chars.width - 1] = _ARROW_UP
+            if (self.__view_offset + self._chars.height) < len(self.__rows):
+                self._chars[len(self._chars) - 1] = _ARROW_DOWN
+
 
     #endregion
 
