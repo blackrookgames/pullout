@@ -7,6 +7,8 @@ import engine.helper as _helper
 
 from .c_BuSeData import\
     BuSeData as _BuSeData
+from .c_BuSeDataRefreshArgs import\
+    BuSeDataRefreshArgs as _BuSeDataRefreshArgs
 from .c_CryptoKeeper import\
     CryptoKeeper as _CryptoKeeper
 from .c_StatusTable import\
@@ -63,9 +65,10 @@ class BuSe(_app.AppPaneObject):
         self.__table.selection_changed.connect(self.__r_table_selection_changed)
         # Train interval
         self.__trlen = max(1, trlen)
-        # BS max/min
-        self.__bsmax = bsmax
-        self.__bsmin = bsmax if (bsmin > bsmax) else bsmin
+        # Refresh args
+        self.__refreshargs = _BuSeDataRefreshArgs(\
+            bsmax, bsmax if (bsmin > bsmax) else bsmin,\
+            self.__buy, self.__sell)
         # Date/time format
         self.__dtformat = dtformat
         # Crypto entries
@@ -98,7 +101,7 @@ class BuSe(_app.AppPaneObject):
                     _c_balance.value, _balration)
         # Update entries
         for _c_price in self.__keeper.prices:
-            self.__entries[_c_price.name]._refresh(self.__bsmax, self.__bsmin)
+            self.__entries[_c_price.name]._refresh(self.__refreshargs)
         # If no crypto is active, find one to be active
         if self.__active is None:
             if len(self.__keeper.prices) > 0:
@@ -113,6 +116,16 @@ class BuSe(_app.AppPaneObject):
         self.__active = self.__table.selcrypto
         # Update character buffer
         self._update_chrs()
+
+    #endregion
+
+    #region helper methods
+
+    def __buy(self, crypto:str):
+        _app.console().print(f"Buying {crypto}")
+
+    def __sell(self, crypto:str):
+        _app.console().print(f"Selling {crypto}")
 
     #endregion
 

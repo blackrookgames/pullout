@@ -1,7 +1,5 @@
 all = ['BuSeData']
 
-from io import StringIO # TODO: Remove
-
 from datetime import\
     datetime as _datetime
 
@@ -11,6 +9,8 @@ from .c_CryptoKeeper import\
     CryptoKeeper as _CryptoKeeper
 from .c_BuSeDataEntry import\
     BuSeDataEntry as _BuSeDataEntry
+from .c_BuSeDataRefreshArgs import\
+    BuSeDataRefreshArgs as _BuSeDataRefreshArgs
 
 class BuSeData:
     """
@@ -147,10 +147,10 @@ class BuSeData:
 
     #region helper methods
 
-    def _refresh(self, bsmax:float, bsmin:float):
+    def _refresh(self, args:_BuSeDataRefreshArgs):
         """
         Assume
-        - bsmax >= bsmin
+        - args.bsmax >= args.bsmin
         \n
         Also accessed by BuSe
         """
@@ -188,6 +188,13 @@ class BuSeData:
         if self.__prev_price is not None:
             self.__diff_price = self.__curr_price - self.__prev_price
             self.__diff_fract = self.__diff_price / self.__prev_price
+        # Buy or sell
+        if self.__diff_fract is not None:
+            if self.__balance > 0.0:
+                if self.__diff_fract < args.bsmin: args.fun_sell(self.__crypto)
+            else:
+                if self.__diff_fract > args.bsmax: args.fun_buy(self.__crypto)
+
     
     def _set_balance(self, value:float):
         """
