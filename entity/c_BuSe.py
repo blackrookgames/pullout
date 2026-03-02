@@ -100,8 +100,8 @@ class BuSe(_app.AppPaneObject):
             oindex = 0
             def _print(_text:str):
                 nonlocal self, oindex
-                _rest = self._chars.width
-                for _i in range(min(self._chars.width, len(_text))):
+                _rest = min(len(self._chars) - oindex, self._chars.width)
+                for _i in range(min(len(_text), _rest)):
                     self._chars[oindex] = _boacon.BCChar(ord(_text[_i]))
                     oindex += 1
                     _rest -= 1
@@ -111,7 +111,7 @@ class BuSe(_app.AppPaneObject):
                     _rest -= 1
             def _print_space():
                 nonlocal self, oindex
-                for _i in range(self._chars.width):
+                for _i in range(min(len(self._chars) - oindex, self._chars.width)):
                     self._chars[oindex] = _SPACE
                     oindex += 1
             # Name

@@ -54,7 +54,7 @@ class BCConsolePane(_BCPane):
     def _resolved(self):
         if self.__chars_w == self.x.pntlen and self.__chars_h == self.y.pntlen:
             return
-        self.__format_charbuffer(self.x.pntlen, self.y.pntlen)
+        self.__format_charbuffer(max(0, self.x.pntlen), max(0, self.y.pntlen))
         self.__update_charbuffer()
     
     def _draw(self, setchr:_Callable[[int, int, _BCChar], None]):
