@@ -31,7 +31,8 @@ class BuSe(_app.AppPaneObject):
             trlen:int,\
             bsmax:float,\
             bsmin:float,\
-            dtformat:_helper.DTFormat):
+            dtformat:_helper.DTFormat,\
+            printer:_helper.PrintHandler):
         """
         Initializer for BuSe
 
@@ -51,6 +52,8 @@ class BuSe(_app.AppPaneObject):
             Minimum "fractional" difference before selling crypto
         :param dtformat:
             Date/time format
+        :param printer:
+            Print handler
         """
         super().__init__()
         self.focusable = True
@@ -71,6 +74,8 @@ class BuSe(_app.AppPaneObject):
             self.__buy, self.__sell)
         # Date/time format
         self.__dtformat = dtformat
+        # Print handler
+        self.__printer = printer
         # Crypto entries
         self.__entries:dict[str, _BuSeData] = {}
         # Active crypto (one being displayed)
@@ -122,10 +127,10 @@ class BuSe(_app.AppPaneObject):
     #region helper methods
 
     def __buy(self, crypto:str):
-        _app.console().print(f"Buying {crypto}")
+        self.__printer.info(f"Buying {crypto}")
 
     def __sell(self, crypto:str):
-        _app.console().print(f"Selling {crypto}")
+        self.__printer.info(f"Selling {crypto}")
 
     #endregion
 

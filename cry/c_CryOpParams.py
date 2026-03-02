@@ -2,10 +2,6 @@ all = ['CryOpParams']
     
 import ccxt as _ccxt
 
-from typing import\
-    Any as _Any,\
-    Callable as _Callable
-
 import engine.helper as _helper
 
 class CryOpParams:
@@ -23,7 +19,7 @@ class CryOpParams:
         self.__ddos_max = 0
         self.__net_delay = 0.0
         self.__net_max = 0
-        self.__printfunc:None|_Callable[[str], None] = None
+        self.__printer:None|_helper.PrintHandler = None
     
     def copy(self):
         """
@@ -34,7 +30,7 @@ class CryOpParams:
         new.__ddos_max = self.__ddos_max
         new.__net_delay = self.__net_delay
         new.__net_max = self.__net_max
-        new.__printfunc = self.__printfunc
+        new.__printer = self.__printer
         return new
 
     #endregion
@@ -86,13 +82,13 @@ class CryOpParams:
         self.__net_max = value
 
     @property
-    def printfunc(self):
+    def printer(self):
         """
-        Print function
+        Print handler
         """
-        return self.__printfunc
-    @printfunc.setter
-    def printfunc(self, value:None|_Callable[[str], None]):
-        self.__printfunc = value
+        return self.__printer
+    @printer.setter
+    def printer(self, value:None|_helper.PrintHandler):
+        self.__printer = value
 
     #endregion

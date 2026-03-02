@@ -11,8 +11,9 @@ class MiscOps(_app.AppObject):
 
     #region init
 
-    def __init__(self):
+    def __init__(self, printer:_helper.PrintHandler):
         super().__init__()
+        self.__printer = printer
         self.__key = -1
         # Prompting
         self.__prompting = False
@@ -83,5 +84,13 @@ class MiscOps(_app.AppObject):
             # Quit?
             if self.__key == 0x1B:
                 _coroutine.create(self.cr_quit())
+
+    def _activated(self):
+        """
+        Called when the object is activated
+        """
+        # Welcome
+        global _f_console
+        self.__printer.info("Written by Zachary Combs")
 
     #endregion

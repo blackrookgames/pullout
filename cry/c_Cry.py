@@ -94,8 +94,8 @@ class Cry:
                 opparams.ddos_delay,\
                 ddos_retries,\
                 opparams.ddos_max)
-            if opparams.printfunc is None: print(msg)
-            else: opparams.printfunc(msg)
+            if opparams.printer is None: print(msg)
+            else: opparams.printer.error(msg)
             return self.__ErrorEval.DDOS,\
                 ddos_retries, net_retries
         # Network error?
@@ -109,8 +109,8 @@ class Cry:
                 opparams.net_delay,\
                 net_retries,\
                 opparams.net_max)
-            if opparams.printfunc is None: print(msg)
-            else: opparams.printfunc(msg)
+            if opparams.printer is None: print(msg)
+            else: opparams.printer.error(msg)
             return self.__ErrorEval.NET,\
                 ddos_retries, net_retries
         # Unexpected?

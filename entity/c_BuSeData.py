@@ -195,7 +195,6 @@ class BuSeData:
             else:
                 if self.__diff_fract > args.bsmax: args.fun_buy(self.__crypto)
 
-    
     def _set_balance(self, value:float):
         """
         Also accessed by BuSe

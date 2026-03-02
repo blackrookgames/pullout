@@ -4,6 +4,7 @@ import shutil
 import sys
 
 from datetime import datetime
+from io import StringIO
 from pathlib import Path
 from typing import cast
 
@@ -46,9 +47,12 @@ class Cmd(cli.CLICommand):
     def __init__(self):
         super().__init__()
         # Determine paths
+        now = self.__log_dt(datetime.now())
         self.__path = Path(sys.argv[0]).resolve().parent
         self.__path_log = self.__path.joinpath("log")
         self.__path_log_bin:None|Path = None
+        self.__path_log_info = self.__path_log.joinpath(f"log.{now}.info.txt")
+        self.__path_log_error = self.__path_log.joinpath(f"log.{now}.error.txt")
         self.__path_secret = self.__path.joinpath("secret")
         self.__path_secret_json = self.__path_secret.joinpath("cdp_api_key.json")
         # Visual offsets
@@ -242,11 +246,32 @@ class Cmd(cli.CLICommand):
 
     #region helper methods
 
-    def __print(self, text:str):
+    def __print(self, arg:tuple, path:Path):
+        # Generate text
+        with StringIO() as s:
+            for i in range(len(arg)):
+                if i > 0: s.write(' ')
+                s.write(str(arg[i]))
+            text = s.getvalue()
+        # Print to console
         assert self.__obj_miscops is not None
         if self.__obj_miscops.prompting:
             self.__printcache.append(text)
         else: app.console().print(text)
+        # Print to file
+        assert self.__datetime is not None
+        with open(path, 'a') as f:
+            f.write(f"{self.__datetime.create(datetime.now())} {text}\n")
+
+    def __print_info(self, arg:tuple):
+        self.__print(arg, self.__path_log_info)
+
+    def __print_error(self, arg:tuple):
+        self.__print(arg, self.__path_log_error)
+    
+    @classmethod
+    def __log_dt(cls, dt:datetime):
+        return f"{dt.year:04}{dt.month:02}{dt.day:02}{dt.hour:02}{dt.minute:02}{dt.second:02}{dt.microsecond:06}"
 
     def __log_init(self):
         try:
@@ -268,8 +293,7 @@ class Cmd(cli.CLICommand):
         self_log_entries = cast(int, self.log_entries) # type: ignore
         self_log_files = cast(int, self.log_files) # type: ignore
         # Create string for date/time
-        _dt = self.__obj_keeper.refreshed_when
-        _dtstr = f"{_dt.year:04}{_dt.month:02}{_dt.day:02}{_dt.hour:02}{_dt.minute:02}{_dt.second:02}{_dt.microsecond:06}"
+        _dtstr = self.__log_dt(self.__obj_keeper.refreshed_when)
         # Create log (if needed)
         _maxxed = self_log_entries > 0 and (self.__logging_entrycount + 1) > self_log_entries
         if self.__path_log_bin is None or _maxxed:
@@ -378,6 +402,8 @@ class Cmd(cli.CLICommand):
             self_off_bottom = cast(int, self.off_bottom) # type: ignore
             self_log_entries = cast(int, self.log_entries) # type: ignore
             self_log_files = cast(int, self.log_files) # type: ignore
+            # Initialize print handler
+            printer = helper.PrintHandler(self.__print_info, self.__print_error)
             # Compute bsmax and bsmin
             if self_bsmax < self_bsmin:
                 bsmax = (self_bsmin + self_bsmax) / 2
@@ -445,9 +471,9 @@ class Cmd(cli.CLICommand):
             panes_bottom = self.__vis_bottom + 2
             # Fix crypto op params
             crypto_opparams = crypto_opparams.copy()
-            crypto_opparams.printfunc = self.__print
+            crypto_opparams.printer = printer
             # Create misc operation handler
-            self.__obj_miscops = entity.MiscOps()
+            self.__obj_miscops = entity.MiscOps(printer)
             self.__obj_miscops.prompt_finish.connect(self.__r_obj_miscops_prompt_finish)
             params.objects.append(self.__obj_miscops)
             # Create crypto keeper
@@ -470,7 +496,8 @@ class Cmd(cli.CLICommand):
                 self.__obj_keeper, self.__obj_table,\
                 round(self_trlen * 1000000),\
                 bsmax / 100, bsmin / 100,\
-                self.__datetime)
+                self.__datetime,\
+                printer)
             self.__obj_buysell.x.dis0 = panes_left + D_STATUS + 2
             self.__obj_buysell.x.len = D_BUYSELL
             self.__obj_buysell.y.dis0 = panes_top

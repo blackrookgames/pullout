@@ -59,9 +59,6 @@ def _m_focus_update(exclude:None|AppObject):
     _m_focus_set(found)
 
 async def _m_main():
-    # Welcome
-    global _f_console
-    _f_console.print("Written by Zachary Combs")
     # Loop
     global _f_objects, _f_focused
     loop = asyncio.get_running_loop()
