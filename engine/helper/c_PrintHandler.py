@@ -10,7 +10,7 @@ class PrintHandler:
 
     #region init
 
-    def __init__(self, info:_PrintFunc, error:_PrintFunc):
+    def __init__(self, info:_PrintFunc, error:_PrintFunc, silent:_PrintFunc):
         """
         Initializer for PrintHandler
 
@@ -18,9 +18,12 @@ class PrintHandler:
             Function for printing information
         :param error:
             Function for printing an error
+        :param silent:
+            Function for printing information "silently"
         """
         self.__info = info
         self.__error = error
+        self.__silent = silent
 
     #endregion
 
@@ -37,6 +40,12 @@ class PrintHandler:
         Prints an error
         """
         self.__error(args)
+
+    def silent(self, *args):
+        """
+        Function for printing information "silently"
+        """
+        self.__silent(args)
 
     #endregion
 

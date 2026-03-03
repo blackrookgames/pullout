@@ -246,28 +246,38 @@ class Cmd(cli.CLICommand):
 
     #region helper methods
 
-    def __print(self, arg:tuple, path:Path):
-        # Generate text
+    @classmethod
+    def __tuplestr(cls, arg:tuple):
         with StringIO() as s:
             for i in range(len(arg)):
                 if i > 0: s.write(' ')
                 s.write(str(arg[i]))
-            text = s.getvalue()
-        # Print to console
+            return s.getvalue()
+        
+    def __print_console(self, text:str):
         assert self.__obj_miscops is not None
         if self.__obj_miscops.prompting:
             self.__printcache.append(text)
         else: app.console().print(text)
-        # Print to file
+
+    def __print_file(self, text:str, path:Path):
         assert self.__datetime is not None
         with open(path, 'a') as f:
             f.write(f"{self.__datetime.create(datetime.now())} {text}\n")
 
     def __print_info(self, arg:tuple):
-        self.__print(arg, self.__path_log_info)
+        text = self.__tuplestr(arg)
+        self.__print_console(text)
+        self.__print_file(text, self.__path_log_info)
 
     def __print_error(self, arg:tuple):
-        self.__print(arg, self.__path_log_error)
+        text = self.__tuplestr(arg)
+        self.__print_console(text)
+        self.__print_file(text, self.__path_log_error)
+
+    def __print_silent(self, arg:tuple):
+        text = self.__tuplestr(arg)
+        self.__print_file(text, self.__path_log_info)
     
     @classmethod
     def __log_dt(cls, dt:datetime):
@@ -403,7 +413,7 @@ class Cmd(cli.CLICommand):
             self_log_entries = cast(int, self.log_entries) # type: ignore
             self_log_files = cast(int, self.log_files) # type: ignore
             # Initialize print handler
-            printer = helper.PrintHandler(self.__print_info, self.__print_error)
+            printer = helper.PrintHandler(self.__print_info, self.__print_error, self.__print_silent)
             # Compute bsmax and bsmin
             if self_bsmax < self_bsmin:
                 bsmax = (self_bsmin + self_bsmax) / 2

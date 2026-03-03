@@ -7,4 +7,4 @@ fi
 
 python=$1
 
-$python ./main.py --crypto BTC,ETH,SOL,XRP,DOGE --ex_pfx USD --time12 --interval 15 --trlen 600 --sellall --log_clear
+$python ./main.py --crypto BTC,ETH,SOL,XRP,DOGE --ex_pfx USD --time12 --interval 15 --trlen 600 --sellall --log_clear --bsmax 2.0 --bsmin 2.0
